@@ -542,7 +542,7 @@
   
     <!-- Sticky Tags Section -->
     {#if selectedNote}
-<div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote.markdown ? 'h-28' : 'h-16'} px-2 py-2`}>
+<div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote.markdown ? 'h-28' : 'h-16'} px-2 pt-4`}>
     <div class="flex items-center">
         <h2 class="text-lg font-bold pr-4">Tags</h2>
         <div class="flex items-center space-x-2 flex-wrap">
