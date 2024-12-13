@@ -15,7 +15,7 @@
         "title": "Fortune's Notes",
         "width": 1280,
         "height": 720,
-        "decorations": true,
+        "decorations": false,
         "transparent": false
       }
     ],

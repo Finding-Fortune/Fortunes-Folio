@@ -4,15 +4,14 @@
     import { onMount } from "svelte";
     import { invoke } from '@tauri-apps/api/core'
     import { writable } from 'svelte/store';
+    import { getCurrentWindow } from "@tauri-apps/api/window";
+
+    const appWindow = getCurrentWindow();
 
     marked.setOptions({
         breaks: true, // Enable line breaks
         gfm: true,    // Enable GitHub Flavored Markdown
     });
-
-    function navigateBack() {
-        goto('/hello');
-    }
 
     interface Note {
         id: number;
@@ -153,53 +152,66 @@
     }
 
     // Add the keybind listener
+    export const maximizedWindow = writable(false);
     function handleKeydown(event: KeyboardEvent): void {
-    if (event.ctrlKey && event.key === "e") {
-        event.preventDefault();
-        if (selectedNote) toggleMarkdown();
+        if (event.ctrlKey && event.key === "e") {
+            event.preventDefault();
+            if (selectedNote) toggleMarkdown();
+        }
+        if (event.ctrlKey && event.key === "s") {
+            event.preventDefault();
+            saveChanges();
+        }
+        if (event.ctrlKey && event.key === "d") {
+            event.preventDefault();
+            deleteNote();
+        }
+        if (event.ctrlKey && event.key === "n") {
+            event.preventDefault();
+            addNewNote();
+        }
+        if (event.ctrlKey && event.key === "f") {
+            event.preventDefault();
+            appWindow.toggleMaximize();
+        }
+        if(event.ctrlKey && event.key == "m") {
+            event.preventDefault();
+            appWindow.minimize();
+        }
+        if(event.ctrlKey && event.key == "Escape") {
+            event.preventDefault();
+            appWindow.close()
+        }
     }
-    if (event.ctrlKey && event.key === "s") {
-        event.preventDefault();
-        saveChanges();
-    }
-    if (event.ctrlKey && event.key === "d") {
-        event.preventDefault();
-        deleteNote();
-    }
-    if (event.ctrlKey && event.key === "n") {
-        event.preventDefault();
-        addNewNote();
-    }
-}
 
-async function searchNotesByTag() {
-    if (!tagSearch.trim()) {
-        // Fetch all notes if search input is empty
+    async function searchNotesByTag() {
+        if (!tagSearch.trim()) {
+            // Fetch all notes if search input is empty
+            try {
+                notes = (await invoke("get_notes")) as Note[];
+                if (notes.length > 0) {
+                    selectedNote = notes[0];
+                } else {
+                    selectedNote = null;
+                }
+            } catch (error) {
+                console.error("Failed to fetch all notes:", error);
+            }
+            return;
+        }
+
         try {
-            notes = (await invoke("get_notes")) as Note[];
+            const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch.trim() })) as Note[];
+            notes = filtered;
             if (notes.length > 0) {
-                selectedNote = notes[0];
+                selectedNote = notes[0]; // Select the first filtered note
             } else {
                 selectedNote = null;
             }
         } catch (error) {
-            console.error("Failed to fetch all notes:", error);
+            console.error("Failed to search notes by tag:", error);
         }
-        return;
     }
-
-    try {
-        const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch.trim() })) as Note[];
-        notes = filtered;
-        if (notes.length > 0) {
-            selectedNote = notes[0]; // Select the first filtered note
-        } else {
-            selectedNote = null;
-        }
-    } catch (error) {
-        console.error("Failed to search notes by tag:", error);
-    }
-}
 
 
 
@@ -240,6 +252,7 @@ async function searchNotesByTag() {
 
     let selectedNoteId: number | null = null;
     onMount(() => {
+
         // Check system preferences for dark mode
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (prefersDark) {
@@ -268,7 +281,7 @@ async function searchNotesByTag() {
 
 </script>
 
-<div class="flex h-screen bg-gray-100 dark:bg-gray-900">
+<div class="flex flex-grow bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar -->
     <aside class="w-1/4 bg-gray-800 text-white p-4 flex flex-col">
         <div class="flex items-center justify-between mb-6">

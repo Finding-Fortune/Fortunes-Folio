@@ -58,7 +58,7 @@
     onMount(fetchNotes);
 </script>
 
-<div class="min-h-screen bg-gray-100 p-6">
+<div class="flex-grow bg-gray-100 p-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">Tags</h1>
         <button

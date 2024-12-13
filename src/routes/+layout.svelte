@@ -1,5 +1,17 @@
 <script>
     import '../app.css';
+    import TitleBar from "../components/TitleBar.svelte"
 </script>
 
-<slot />
+<div class="min-h-screen flex flex-col overflow-hidden">
+    <!-- Fixed Title Bar -->
+    <TitleBar />
+
+    <!-- Main Content -->
+    <div class="flex flex-grow flex-1 h-auto overflow-auto">
+        <slot />
+    </div>
+</div>
+
+<style>
+</style>
