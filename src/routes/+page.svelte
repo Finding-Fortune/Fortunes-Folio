@@ -71,13 +71,21 @@
             markdown: true,
             tags: [],
         };
+
         try {
+            // Add the new note to the backend
             await invoke("add_note", newNote);
-            await fetchNotes(); // Refresh notes list
+
+            // Fetch the updated notes list
+            await fetchNotes();
+
+            // Identify the newly added note (assuming it's the last one added)
+            selectedNote = notes[notes.length - 1];
         } catch (error) {
             console.error("Failed to add note:", error);
         }
     }
+
 
     async function saveChanges() {
         if (selectedNote) {
@@ -116,13 +124,24 @@
 
 
     async function deleteNote() {
-        if (selectedNote) {
-            try {
-                await invoke("delete_note", { id: selectedNote.id });
-                await fetchNotes(); // Refresh notes list
-            } catch (error) {
-                console.error("Failed to delete note:", error);
+        if (!selectedNote) return;
+
+        try {
+            // Send delete request to the backend
+            await invoke("delete_note", { id: selectedNote.id });
+
+            // Refresh the notes list
+            await fetchNotes();
+
+            // Clear the selected note if no notes remain
+            if (notes.length === 0) {
+                selectedNote = null;
+            } else {
+                // Select another note (e.g., the first one)
+                selectedNote = notes[0];
             }
+        } catch (error) {
+            console.error("Failed to delete note:", error);
         }
     }
 
