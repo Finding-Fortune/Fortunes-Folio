@@ -1,5 +1,11 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
+    import { marked } from 'marked';
+
+    marked.setOptions({
+        breaks: true, // Enable line breaks
+        gfm: true,    // Enable GitHub Flavored Markdown
+    });
 
     function navigateBack() {
         goto('/hello');
@@ -9,11 +15,57 @@
         id: number;
         title: string;
         content: string;
+        markdown: boolean; // New flag to toggle between Markdown and plain text
     }
 
     let notes: Note[] = [
-        { id: 1, title: "First Note", content: "This is the first note." },
-        { id: 2, title: "Second Note", content: "This is the second note." },
+        {
+            id: 1,
+            title: "Markdown Example",
+            content: `
+# Markdown Syntax Test
+
+## Subheading
+
+### Sub-subheading
+
+**Bold Text**
+
+_Italic Text_
+
+~~Strikethrough~~
+
+1. Ordered List Item 1
+2. Ordered List Item 2
+   - Nested Bullet 1
+   - Nested Bullet 2
+
+- Unordered List Item 1
+- Unordered List Item 2
+
+\`Inline code\`
+
+\`\`\`javascript
+// Code block example
+function helloWorld() {
+  console.log("Hello, World!");
+}
+\`\`\`
+
+> Blockquote Example
+
+[Link to Google](https://www.google.com)
+
+![Image Example](https://via.placeholder.com/150)
+    `,
+            markdown: true,
+        },
+        {
+            id: 2,
+            title: "Plain Text Note",
+            content: "This is a simple plain text note.",
+            markdown: false,
+        },
     ];
 
     let selectedNote: Note = notes[0];
@@ -27,13 +79,14 @@
             id: notes.length > 0 ? notes[notes.length - 1].id + 1 : 1,
             title: `New Note ${notes.length + 1}`,
             content: "Start writing your note here...",
+            markdown: false, // Default to plain text
         };
         notes = [...notes, newNote];
         selectNote(newNote);
     }
 
     function saveChanges(): void {
-        notes = notes.map((note) => 
+        notes = notes.map((note) =>
             note.id === selectedNote.id ? { ...note, content: selectedNote.content } : note
         );
     }
@@ -45,6 +98,10 @@
         } else {
             alert("Cannot delete the last note!");
         }
+    }
+
+    function toggleMarkdown(): void {
+        selectedNote.markdown = !selectedNote.markdown;
     }
 </script>
 
@@ -81,6 +138,12 @@
         <h1 class="text-xl font-bold">{selectedNote.title}</h1>
         <div class="flex space-x-4">
             <button
+                class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+                on:click={toggleMarkdown}
+            >
+            {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
+            </button>
+            <button
                 class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 on:click={saveChanges}
             >
@@ -96,10 +159,16 @@
   
       <!-- Content -->
       <div class="p-4 flex-1 bg-gray-50 overflow-y-auto">
-        <textarea
-          class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-          bind:value={selectedNote.content}
-        ></textarea>
+        {#if selectedNote.markdown}
+          <div class="prose max-w-none">
+            {@html marked(selectedNote.content)}
+          </div>
+        {:else}
+          <textarea
+            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+            bind:value={selectedNote.content}
+          ></textarea>
+        {/if}
       </div>
     </main>
   </div>
