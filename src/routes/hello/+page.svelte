@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { marked } from 'marked';
+    import { onMount } from "svelte";
 
     marked.setOptions({
         breaks: true, // Enable line breaks
@@ -87,8 +88,12 @@ function helloWorld() {
 
     function saveChanges(): void {
         notes = notes.map((note) =>
-            note.id === selectedNote.id ? { ...note, content: selectedNote.content } : note
+            note.id === selectedNote.id
+            ? { ...note, title: selectedNote.title, content: selectedNote.content }
+            : note
         );
+        // If we save changes go out of edit mode back to markdown preview mode
+        selectedNote.markdown = true;
     }
 
     function deleteNote(): void {
@@ -103,6 +108,34 @@ function helloWorld() {
     function toggleMarkdown(): void {
         selectedNote.markdown = !selectedNote.markdown;
     }
+
+    // Add the keybind listener
+  function handleKeydown(event: KeyboardEvent): void {
+    if (event.ctrlKey && event.key === "e") {
+      event.preventDefault(); // Prevent default browser behavior
+      toggleMarkdown();
+    }
+    if (event.ctrlKey && event.key === "s") {
+      event.preventDefault(); // Prevent default browser behavior
+      saveChanges();
+    }
+    if (event.ctrlKey && event.key === "d") {
+      event.preventDefault(); // Prevent default browser behavior
+      deleteNote();
+    }
+    if (event.ctrlKey && event.key === "n") {
+      event.preventDefault(); // Prevent default browser behavior
+      addNewNote();
+    }
+  }
+
+  // Lifecycle to attach and detach the listener
+  onMount(() => {
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  });
 </script>
 
 <div class="flex h-screen bg-gray-100">
@@ -135,27 +168,39 @@ function helloWorld() {
     <main class="flex-1 flex flex-col">
       <!-- Header -->
       <header class="bg-white shadow-md p-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold">{selectedNote.title}</h1>
-        <div class="flex space-x-4">
-            <button
-                class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
-                on:click={toggleMarkdown}
-            >
-            {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
-            </button>
-            <button
-                class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                on:click={saveChanges}
-            >
-                Save Changes
-            </button>
-            <button class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                on:click={deleteNote}
-            >
-                Delete Note
-            </button>
+        <div class="flex-1">
+          {#if selectedNote.markdown}
+            <h1 class="text-xl font-bold truncate">{selectedNote.title}</h1>
+          {:else}
+            <input
+              type="text"
+              class="text-xl font-bold border-b-2 focus:outline-none focus:border-blue-500 p-1 w-full max-w-lg truncate"
+              bind:value={selectedNote.title}
+              placeholder="Enter title here"
+            />
+          {/if}
         </div>
-      </header>
+        <div class="flex space-x-4">
+          <button
+            class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+            on:click={toggleMarkdown}
+          >
+            {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
+          </button>
+          <button
+            class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            on:click={saveChanges}
+          >
+            Save Changes
+          </button>
+          <button
+            class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+            on:click={deleteNote}
+          >
+            Delete Note
+          </button>
+        </div>
+      </header>        
   
       <!-- Content -->
       <div class="p-4 flex-1 bg-gray-50 overflow-y-auto">
