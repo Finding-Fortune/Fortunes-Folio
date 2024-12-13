@@ -198,9 +198,23 @@ fn delete_note(state: tauri::State<AppState>, id: i32) {
 #[tauri::command]
 fn search_notes_by_tag(state: tauri::State<AppState>, tag: String) -> Vec<Note> {
     let conn = state.conn.lock().unwrap();
+
+    // Query to fetch notes with the specified tag
     let mut stmt = conn
-        .prepare("SELECT id, title, content, markdown, tags FROM notes WHERE tags LIKE ?1")
-        .expect("Failed to prepare statement");
+        .prepare(
+            "SELECT n.id, n.title, n.content, n.markdown, GROUP_CONCAT(t.name) AS tags
+             FROM notes n
+             INNER JOIN note_tags nt ON n.id = nt.note_id
+             INNER JOIN tags t ON nt.tag_id = t.id
+             WHERE n.id IN (
+                 SELECT note_id
+                 FROM note_tags
+                 INNER JOIN tags ON note_tags.tag_id = tags.id
+                 WHERE tags.name LIKE ?
+             )
+             GROUP BY n.id",
+        )
+        .expect("Failed to prepare search statement");
 
     let tag_query = format!("%{}%", tag);
     let notes_iter = stmt
@@ -210,10 +224,16 @@ fn search_notes_by_tag(state: tauri::State<AppState>, tag: String) -> Vec<Note> 
                 title: row.get(1)?,
                 content: row.get(2)?,
                 markdown: row.get(3)?,
-                tags: row.get(4)?,
+                tags: row
+                    .get::<_, Option<String>>(4)?
+                    .unwrap_or_default()
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "), // Convert back to comma-separated string
             })
         })
-        .expect("Failed to map query results");
+        .expect("Failed to execute query");
 
     notes_iter.filter_map(|res| res.ok()).collect()
 }

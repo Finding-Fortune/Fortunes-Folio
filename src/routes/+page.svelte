@@ -152,12 +152,27 @@
     }
 }
 
-  async function searchNotesByTag() {
+async function searchNotesByTag() {
+    if (!tagSearch.trim()) {
+        // Fetch all notes if search input is empty
+        try {
+            notes = (await invoke("get_notes")) as Note[];
+            if (notes.length > 0) {
+                selectedNote = notes[0];
+            } else {
+                selectedNote = null;
+            }
+        } catch (error) {
+            console.error("Failed to fetch all notes:", error);
+        }
+        return;
+    }
+
     try {
-        const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch })) as Note[];
+        const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch.trim() })) as Note[];
         notes = filtered;
         if (notes.length > 0) {
-            selectedNote = notes[0]; // Select the first note in the filtered list
+            selectedNote = notes[0]; // Select the first filtered note
         } else {
             selectedNote = null;
         }
@@ -166,11 +181,12 @@
     }
 }
 
+
+
   // Fetch notes from the backend
   async function fetchNotes() {
     try {
         const rawNotes = (await invoke("get_notes")) as Note[];
-        console.log(rawNotes)
         notes = rawNotes.map((note) => ({
             ...note,
             tags: typeof note.tags === "string"
@@ -306,44 +322,52 @@
   
     <!-- Sticky Tags Section -->
     {#if selectedNote}
-      <div class="sticky bottom-0 bg-gray-100 border-t p-4">
-        <h2 class="text-lg font-bold mb-2">Tags</h2>
-        <div class="flex items-center space-x-2 mb-4">
-          {#each (Array.isArray(selectedNote.tags)
-              ? selectedNote.tags.filter((tag) => tag.trim() !== "")
-              : selectedNote.tags
-              ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
-              : []) as tag}
-            <div class="flex items-center bg-gray-200 text-gray-800 px-2 py-1 rounded">
-              {tag}
-              <button
+    <div class="sticky bottom-0 bg-gray-100 border-t p-4">
+    <h2 class="text-lg font-bold mb-2">Tags</h2>
+    <div class="flex items-center space-x-2 mb-4">
+        {#each (Array.isArray(selectedNote.tags)
+            ? selectedNote.tags.filter((tag) => tag.trim() !== "")
+            : selectedNote.tags
+            ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
+            : []) as tag}
+        <div
+            class="flex items-center px-2 py-1 rounded"
+            class:bg-blue-500={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
+            class:bg-gray-200={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
+            class:text-white={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
+            class:text-gray-800={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
+        >
+            {tag}
+            {#if !selectedNote.markdown}
+            <button
                 class="ml-2 text-red-500 hover:text-red-700"
                 on:click={() => removeTag(tag)}
-              >
-                &times;
-              </button>
-            </div>
-          {/each}
-        </div>
-  
-        <!-- Add Tag Input (Only visible in Edit Mode) -->
-        {#if !selectedNote.markdown}
-          <div class="flex space-x-2">
-            <input
-              type="text"
-              class="border rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-              bind:value={newTag}
-              placeholder="Add a tag..."
-            />
-            <button
-              class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              on:click={addTag}
             >
-              Add Tag
+                &times;
             </button>
-          </div>
-        {/if}
-      </div>
+            {/if}
+        </div>
+        {/each}
+    </div>
+
+    <!-- Add Tag Input (Only visible in Edit Mode) -->
+    {#if !selectedNote.markdown}
+        <div class="flex space-x-2">
+        <input
+            type="text"
+            class="border rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+            bind:value={newTag}
+            placeholder="Add a tag..."
+        />
+        <button
+            class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            on:click={addTag}
+        >
+            Add Tag
+        </button>
+        </div>
+    {/if}
+    </div>
     {/if}
   </main>  
 </div>
@@ -368,6 +392,17 @@
 }
 .tag button:hover {
     color: #b91c1c;
+}
+.bg-blue-500 {
+    background-color: #3b82f6;
+}
+
+.bg-gray-200 {
+    background-color: #e5e7eb;
+}
+
+.text-white {
+    color: white;
 }
 </style>
 
