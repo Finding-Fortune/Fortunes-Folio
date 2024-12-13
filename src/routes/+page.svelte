@@ -13,6 +13,49 @@
         gfm: true,    // Enable GitHub Flavored Markdown
     });
 
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    function startResizing(event: MouseEvent): void {
+        isResizing = true;
+        startX = event.clientX;
+
+        const sidebar = document.querySelector("aside") as HTMLElement | null;
+        if (sidebar) {
+            startWidth = sidebar.offsetWidth;
+
+            // Add listeners for continuous resizing
+            document.addEventListener("mousemove", resize);
+            document.addEventListener("mouseup", stopResizing);
+        }
+    }
+
+    function resize(event: MouseEvent): void {
+        if (isResizing) {
+            const dx = event.clientX - startX;
+
+            const sidebar = document.querySelector("aside") as HTMLElement | null;
+            if (sidebar) {
+                const newWidth = Math.min(
+                Math.max(startWidth + dx, 200), // Minimum width
+                window.innerWidth * 0.5 // Maximum width (50% of viewport)
+                );
+
+                document.documentElement.style.setProperty("--sidebar-width", `${newWidth}px`);
+            }
+        }
+    }
+
+    function stopResizing(): void {
+        isResizing = false;
+
+        // Remove listeners when resizing stops
+        document.removeEventListener("mousemove", resize);
+        document.removeEventListener("mouseup", stopResizing);
+    }
+
+
     interface Note {
         id: number;
         title: string;
@@ -283,7 +326,7 @@
 
 <div class="flex flex-grow bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar -->
-    <aside class="w-1/4 bg-gray-800 text-white p-4 flex flex-col">
+    <aside style="width: var(--sidebar-width, 25%);" class="w-1/4 bg-gray-800 text-white p-4 flex flex-col">
         <div class="flex items-center justify-between mb-6">
             <!-- Notes Header -->
             <h2 class="text-2xl font-bold">Notes</h2>
@@ -349,6 +392,14 @@
             View Tags
         </button>
     </aside>
+
+    <!-- Resizable handle -->
+    <button
+        aria-label="Resize sidebar"
+        class="w-1 bg-gray-600 cursor-col-resize focus:outline-none"
+        on:mousedown={startResizing}
+    ></button>
+
 
     <!-- Main Content -->
   <main class="flex-1 flex flex-col relative">
@@ -506,6 +557,10 @@
     color: var(--text-color) !important;
 }
 
+:global(html.dark .color-white-100) {
+    color: #f3f4f6; /* Dark equivalent of gray-100 */
+}
+
 :global(html.dark .bg-gray-100) {
     background-color: #1f2937; /* Dark equivalent of gray-100 */
 }
@@ -526,7 +581,7 @@
     border-color: var(--border-color);
 }
 
-:global(html.dark button) {
+:global(html.dark button, html.dark h2) {
     background-color: #374151; /* Dark button background */
     color: var(--text-color);
 }
@@ -542,6 +597,25 @@
 :global(html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark li) {
     background-color: #2d3748 !important; /* Equivalent to dark:bg-gray-800 */
     color: #f3f4f6 !important; /* Equivalent to dark:text-white */
+}
+
+:root {
+  --sidebar-width: 25%; /* Default sidebar width */
+}
+
+aside {
+  transition: width 0.2s ease-in-out;
+}
+
+.w-1 {
+  width: 4px; /* Handle width */
+  background-color: rgb(75 85 99); /* Gray-600 */
+  cursor: col-resize;
+  user-select: none;
+}
+
+.w-1:hover {
+  background-color: rgb(55 65 81); /* Gray-700 */
 }
 </style>
 
