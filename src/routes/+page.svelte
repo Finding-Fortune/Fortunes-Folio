@@ -3,6 +3,7 @@
     import { marked } from 'marked';
     import { onMount } from "svelte";
     import { invoke } from '@tauri-apps/api/core'
+    import { writable } from 'svelte/store';
 
     marked.setOptions({
         breaks: true, // Enable line breaks
@@ -204,25 +205,48 @@ async function searchNotesByTag() {
 
   // Fetch notes from the backend
   async function fetchNotes() {
-    try {
-        const rawNotes = (await invoke("get_notes")) as Note[];
-        notes = rawNotes.map((note) => ({
-            ...note,
-            tags: typeof note.tags === "string"
-                ? note.tags.split(",").map((tag) => tag.trim()) // Convert tags from string to array
-                : note.tags,
-            markdown: true, // Set markdown mode to true by default after saving
-        }));
-        if (notes.length > 0) {
-            selectedNote = notes[0]; // Select the first note by default
+        try {
+            const rawNotes = (await invoke("get_notes")) as Note[];
+            notes = rawNotes.map((note) => ({
+                ...note,
+                tags: typeof note.tags === "string"
+                    ? note.tags.split(",").map((tag) => tag.trim()) // Convert tags from string to array
+                    : note.tags,
+                markdown: true, // Set markdown mode to true by default after saving
+            }));
+            if (notes.length > 0) {
+                selectedNote = notes[0]; // Select the first note by default
+            }
+        } catch (error) {
+            console.error("Failed to fetch notes:", error);
         }
-    } catch (error) {
-        console.error("Failed to fetch notes:", error);
     }
-}
+
+    // Store for dark mode
+    export const darkMode = writable(false);
+
+    // Toggle dark mode
+    function toggleDarkMode() {
+        darkMode.update(mode => {
+            const newMode = !mode;
+            if (newMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            return newMode;
+        });
+    }
 
     let selectedNoteId: number | null = null;
     onMount(() => {
+        // Check system preferences for dark mode
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+            darkMode.set(true);
+            document.documentElement.classList.add('dark');
+        }
+
         // Wrap the async logic in a self-invoking function
         (async () => {
             await fetchNotes(); // Ensure notes are fetched before proceeding
@@ -244,10 +268,31 @@ async function searchNotesByTag() {
 
 </script>
 
-<div class="flex h-screen bg-gray-100">
+<div class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar -->
     <aside class="w-1/4 bg-gray-800 text-white p-4 flex flex-col">
-        <h2 class="text-2xl font-bold mb-6">Notes</h2>
+        <div class="flex items-center justify-between mb-6">
+            <!-- Notes Header -->
+            <h2 class="text-2xl font-bold">Notes</h2>
+        
+            <!-- Dark Mode Button -->
+            <button
+                class="flex items-center space-x-2 p-2 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                on:click={toggleDarkMode}
+            >
+                <!-- Moon Icon -->
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-5 h-5 text-gray-600 dark:text-gray-300"
+                >
+                    <path
+                        d="M21.753 15.904a9.005 9.005 0 01-10.796-10.797c.084-.336-.206-.63-.54-.547A10.001 10.001 0 1019.94 19.94c.084-.336-.211-.63-.547-.54z"
+                    />
+                </svg>
+            </button>
+        </div>        
 
         <!-- Search by Tag -->
         <div class="mb-4">
@@ -293,10 +338,9 @@ async function searchNotesByTag() {
     </aside>
 
     <!-- Main Content -->
-    <!-- Main Content -->
-<main class="flex-1 flex flex-col relative">
+  <main class="flex-1 flex flex-col relative">
     <!-- Header -->
-    <header class="bg-white shadow-md p-4 flex items-center justify-between">
+    <header class="shadow-md p-4 flex items-center justify-between bg-white dark:bg-gray-800 dark:text-white">
       <div class="flex-1">
         {#if selectedNote}
           {#if selectedNote.markdown}
@@ -336,18 +380,18 @@ async function searchNotesByTag() {
     </header>
   
     <!-- Content -->
-    <div class="p-4 flex-1 bg-gray-50 overflow-y-auto">
+    <div class="p-4 flex-1 bg-gray-50 overflow-y-auto dark:bg-gray-900">
       {#if selectedNote}
         {#if selectedNote.markdown}
           <div class="prose max-w-none mb-16">
             {@html marked(selectedNote.content)}
           </div>
         {:else}
-          <textarea
-            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+        <textarea
+            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200 dark:text-gray-800"
             bind:value={selectedNote.content}
             placeholder="Start writing your note here..."
-          ></textarea>
+        ></textarea>
         {/if}
       {/if}
     </div>
@@ -363,7 +407,7 @@ async function searchNotesByTag() {
             ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
             : []) as tag}
         <div
-            class="flex items-center px-2 py-1 rounded"
+            class="tag flex items-center px-2 py-1 rounded"
             class:bg-blue-500={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
             class:bg-gray-200={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
             class:text-white={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
@@ -435,6 +479,56 @@ async function searchNotesByTag() {
 
 .text-white {
     color: white;
+}
+
+/* Add dark mode styles */
+:global(html.dark) {
+    --bg-color: #1f2937; /* Dark background color */
+    --text-color: #f3f4f6; /* Light text color */
+    --border-color: #374151; /* Dark border color */
+}
+
+:global(html.dark body) {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+}
+
+:global(html.dark .bg-gray-100) {
+    background-color: #1f2937; /* Dark equivalent of gray-100 */
+}
+
+:global(html.dark .bg-gray-50) {
+    background-color: #2d3748; /* Dark equivalent of gray-50 */
+}
+
+:global(html.dark .text-gray-900) {
+    color: #f3f4f6; /* Light equivalent of gray-900 */
+}
+
+:global(html.dark .text-gray-800) {
+    color: #e2e8f0; /* Light equivalent of gray-800 */
+}
+
+:global(html.dark .border) {
+    border-color: var(--border-color);
+}
+
+:global(html.dark button) {
+    background-color: #374151; /* Dark button background */
+    color: var(--text-color);
+}
+
+:global(html.dark button:hover) {
+    background-color: #4b5563; /* Dark button hover */
+}
+
+:global(html.dark header) {
+    background-color: #1f2937 !important; /* Equivalent to dark:bg-gray-800 */
+    color: #f3f4f6 !important; /* Equivalent to dark:text-white */
+}
+:global(html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark li) {
+    background-color: #2d3748 !important; /* Equivalent to dark:bg-gray-800 */
+    color: #f3f4f6 !important; /* Equivalent to dark:text-white */
 }
 </style>
 

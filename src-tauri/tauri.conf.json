@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "note-app",
+  "productName": "Fortune's Notes",
   "version": "0.1.0",
   "identifier": "note-app",
   "build": {
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "note-app",
-        "width": 800,
-        "height": 600
+        "title": "Fortune's Notes",
+        "width": 1280,
+        "height": 720,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
