@@ -60,7 +60,7 @@
 
 <div
   data-tauri-drag-region
-  class="titlebar flex items-center justify-between bg-gray-800 text-white px-4 h-8"
+  class="titlebar fixed top-0 w-full left-0 flex items-center justify-between bg-gray-800 text-white px-4 h-8 z-50"
 >
   <!-- App Title -->
   <div class="flex items-center space-x-2">
