@@ -202,14 +202,27 @@ async function searchNotesByTag() {
     }
 }
 
-  // Lifecycle to attach and detach the listener
-  onMount(() => {
-    fetchNotes();
-    window.addEventListener("keydown", handleKeydown);
-    return () => {
-      window.removeEventListener("keydown", handleKeydown);
-    };
-  });
+    let selectedNoteId: number | null = null;
+    onMount(() => {
+        // Wrap the async logic in a self-invoking function
+        (async () => {
+            await fetchNotes(); // Ensure notes are fetched before proceeding
+
+            const params = new URLSearchParams(window.location.search);
+            const noteIdParam = params.get('noteId');
+            selectedNoteId = noteIdParam ? parseInt(noteIdParam) : null;
+
+            if (selectedNoteId) {
+                selectedNote = notes.find((note) => note.id === selectedNoteId) || null;
+            }
+        })();
+
+        window.addEventListener("keydown", handleKeydown);
+        return () => {
+            window.removeEventListener("keydown", handleKeydown);
+        };
+    });
+
 </script>
 
 <div class="flex h-screen bg-gray-100">
