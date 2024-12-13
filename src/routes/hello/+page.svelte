@@ -21,6 +21,31 @@
     function selectNote(note: Note): void {
         selectedNote = note;
     }
+
+    function addNewNote(): void {
+        const newNote: Note = {
+            id: notes.length > 0 ? notes[notes.length - 1].id + 1 : 1,
+            title: `New Note ${notes.length + 1}`,
+            content: "Start writing your note here...",
+        };
+        notes = [...notes, newNote];
+        selectNote(newNote);
+    }
+
+    function saveChanges(): void {
+        notes = notes.map((note) => 
+            note.id === selectedNote.id ? { ...note, content: selectedNote.content } : note
+        );
+    }
+
+    function deleteNote(): void {
+        if (notes.length > 1) {
+            notes = notes.filter((note) => note.id !== selectedNote.id);
+            selectedNote = notes[0]; // Set the first note as the selected note
+        } else {
+            alert("Cannot delete the last note!");
+        }
+    }
 </script>
 
 <div class="flex h-screen bg-gray-100">
@@ -40,7 +65,8 @@
           </li>
         {/each}
       </ul>
-      <button class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
+      <button class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
+      on:click={addNewNote}>
         + New Note
       </button>
       <button class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
@@ -53,9 +79,19 @@
       <!-- Header -->
       <header class="bg-white shadow-md p-4 flex items-center justify-between">
         <h1 class="text-xl font-bold">{selectedNote.title}</h1>
-        <button class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-          Delete Note
-        </button>
+        <div class="flex space-x-4">
+            <button
+                class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                on:click={saveChanges}
+            >
+                Save Changes
+            </button>
+            <button class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                on:click={deleteNote}
+            >
+                Delete Note
+            </button>
+        </div>
       </header>
   
       <!-- Content -->
