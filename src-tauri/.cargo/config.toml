@@ -1,5 +1,2 @@
 [target.x86_64-pc-windows-msvc]  # Replace this with your target triple
 linker = "lld"
-
-[build]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
