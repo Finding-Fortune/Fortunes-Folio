@@ -55,7 +55,20 @@
         goto(`/?noteId=${noteId}`);
     }
 
-    onMount(fetchNotes);
+    function handleKeydown(event: KeyboardEvent): void {
+        if(event.ctrlKey && event.key == "n") {
+            event.preventDefault();
+            goto('/');
+        }
+    }
+
+    onMount(() => {
+        fetchNotes();
+        window.addEventListener("keydown", handleKeydown);
+        return () => {
+            window.removeEventListener("keydown", handleKeydown);
+        };
+    });
 </script>
 
 <div class="flex-grow bg-gray-100 p-6">
@@ -73,7 +86,7 @@
     <div class="mb-8">
         <h2 class="text-xl font-bold text-gray-700 mb-4">All Tags</h2>
         <div class="flex flex-wrap gap-2">
-            {#each Array.from(tags) as tag}
+            {#each Array.from(tags).filter(tag => tag.trim() !== "") as tag}
                 <button
                     class="px-3 py-1 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition"
                     on:click={() => filterNotesByTag(tag)}

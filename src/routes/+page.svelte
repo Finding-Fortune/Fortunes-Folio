@@ -285,6 +285,10 @@
             event.preventDefault();
             appWindow.close()
         }
+        if(event.ctrlKey && event.key == "t") {
+            event.preventDefault();
+            goto('/tags');
+        }
     }
 
     async function searchNotesByTag() {
