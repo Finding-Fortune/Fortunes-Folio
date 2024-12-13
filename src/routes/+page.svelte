@@ -3,7 +3,7 @@
     import { marked } from 'marked';
     import { onMount } from "svelte";
     import { invoke } from '@tauri-apps/api/core'
-    import { writable } from 'svelte/store';
+    import { writable, get } from 'svelte/store';
     import { getCurrentWindow } from "@tauri-apps/api/window";
 
     const appWindow = getCurrentWindow();
@@ -281,27 +281,42 @@
     export const darkMode = writable(false);
 
     // Toggle dark mode
-    function toggleDarkMode() {
-        darkMode.update(mode => {
-            const newMode = !mode;
+    async function loadDarkMode() {
+        const enabled = await invoke<boolean>('get_dark_mode');
+        darkMode.set(enabled);
+        if (enabled) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+
+    async function toggleDarkMode() {
+        const currentMode = get(darkMode); // Get the current mode value
+        const newMode = !currentMode;
+
+        darkMode.set(newMode); // Update the store immediately for UI responsiveness
+
+        // Persist the new mode to the backend
+        try {
+            await invoke('set_dark_mode', { enabled: newMode });
             if (newMode) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
-            return newMode;
-        });
+        } catch (error) {
+            console.error('Failed to update dark mode:', error);
+            // Rollback if saving fails
+            darkMode.set(currentMode);
+        }
     }
 
     let selectedNoteId: number | null = null;
     onMount(() => {
 
         // Check system preferences for dark mode
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark) {
-            darkMode.set(true);
-            document.documentElement.classList.add('dark');
-        }
+        loadDarkMode();
 
         // Wrap the async logic in a self-invoking function
         (async () => {

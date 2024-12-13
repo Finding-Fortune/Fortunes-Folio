@@ -1,6 +1,8 @@
 <script>
     import { onMount } from "svelte";
     import { getCurrentWindow } from "@tauri-apps/api/window";
+    import { invoke } from '@tauri-apps/api/core'
+    import { writable, get } from 'svelte/store';
 
     const appWindow = getCurrentWindow();
 
@@ -33,8 +35,24 @@
         }
     }
 
+    // Store for dark mode
+    export const darkMode = writable(false);
+
+    // Toggle dark mode
+    async function loadDarkMode() {
+        const enabled = await invoke('get_dark_mode');
+        darkMode.set(enabled);
+        if (enabled) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+
     onMount(() => {
         setupTitlebar();
+        // Check system preferences for dark mode
+        loadDarkMode();
     });
 </script>
 

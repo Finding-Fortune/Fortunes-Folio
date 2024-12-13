@@ -53,11 +53,51 @@ impl AppState {
         )
         .expect("Failed to create the `note_tags` table");
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS user_preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT NOT NULL
+            )",
+            [],
+        )
+        .expect("Failed to create the `user_preferences` table");
+
         AppState {
             conn: Mutex::new(conn),
         }
     }
 }
+
+
+
+
+#[tauri::command]
+fn get_dark_mode(state: tauri::State<AppState>) -> Result<bool, String> {
+    let conn = state.conn.lock().unwrap();
+    let value: Option<String> = conn
+        .query_row(
+            "SELECT value FROM user_preferences WHERE key = 'dark_mode'",
+            [],
+            |row| row.get(0),
+        )
+        .ok();
+
+    Ok(value.unwrap_or("false".to_string()) == "true")
+}
+
+#[tauri::command]
+fn set_dark_mode(state: tauri::State<AppState>, enabled: bool) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    conn.execute(
+        "INSERT INTO user_preferences (key, value) VALUES ('dark_mode', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [enabled.to_string()],
+    )
+    .map_err(|e| format!("Failed to set dark mode: {}", e))?;
+    Ok(())
+}
+
 
 #[tauri::command]
 fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
@@ -248,6 +288,8 @@ pub fn run() {
             update_note,
             delete_note,
             search_notes_by_tag,
+            get_dark_mode,
+            set_dark_mode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
