@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:css": "npx tailwindcss -i ./src/app.css -o ./static/css/app.css --watch",
+    "tauri:dev": "npm-run-all --parallel build:css \"tauri dev\"",
+    "tauri:build": "npx tailwindcss -i ./src/app.css -o ./static/css/app.css && tauri build"
   },
   "license": "MIT",
   "dependencies": {

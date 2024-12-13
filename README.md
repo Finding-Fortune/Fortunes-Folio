@@ -15,3 +15,6 @@ bun run dev
 
 bun run tauri dev
 - Starts svelte.js hot reloading server as a desktop app
+
+bun run tauri:dev
+- Runs svelte.js hot reloading with tailwind.css hot reloading
