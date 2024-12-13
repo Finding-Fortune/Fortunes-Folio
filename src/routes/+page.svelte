@@ -467,7 +467,7 @@
           </div>
         {:else}
         <textarea
-            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200 dark:text-gray-800"
+            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200"
             bind:value={selectedNote.content}
             placeholder="Start writing your note here..."
         ></textarea>
@@ -596,8 +596,12 @@
     border-color: var(--border-color);
 }
 
-:global(html.dark button, html.dark h2) {
+:global(html.dark button) {
     background-color: #374151; /* Dark button background */
+    color: var(--text-color);
+}
+
+:global(html.dark p, html.dark h3, html.dark h4, html.dark h1, html.dark h5) {
     color: var(--text-color);
 }
 
