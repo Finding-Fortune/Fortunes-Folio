@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { marked } from 'marked';
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import { invoke } from '@tauri-apps/api/core'
     import { writable, get } from 'svelte/store';
     import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -111,7 +111,7 @@
         const newNote = {
             title: `New Note ${notes.length + 1}`,
             content: "",
-            markdown: true,
+            markdown: false,
             tags: [],
         };
 
@@ -124,6 +124,7 @@
 
             // Identify the newly added note (assuming it's the last one added)
             selectedNote = notes[notes.length - 1];
+            selectedNote.markdown = false;
         } catch (error) {
             console.error("Failed to add note:", error);
         }
@@ -188,9 +189,66 @@
         }
     }
 
-    function toggleMarkdown(): void {
+    let textareaElement: HTMLTextAreaElement | null = null;
+
+    function autoResizeTextarea() {
+        if (textareaElement) {
+            // Save the current scroll position of the window
+            const windowScrollY = window.scrollY;
+
+            // Reset the textarea height and adjust it to fit content
+            textareaElement.style.height = 'auto'; // Reset height
+            textareaElement.style.height = `${textareaElement.scrollHeight + 5}px`; // Set height to fit content. Add +5 to ensure no overflow
+
+            // Get the caret (cursor) position
+            const selectionStart = textareaElement.selectionStart;
+
+            // Create a temporary div to measure caret position
+            const tempDiv = document.createElement('div');
+            const textBeforeCaret = textareaElement.value.substring(0, selectionStart);
+            const lineHeight = parseInt(window.getComputedStyle(textareaElement).lineHeight, 10) || 16;
+
+            // Mirror textarea styles onto the temporary div
+            const style = window.getComputedStyle(textareaElement);
+            tempDiv.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                width: ${textareaElement.offsetWidth}px;
+                font-size: ${style.fontSize};
+                font-family: ${style.fontFamily};
+                line-height: ${style.lineHeight};
+                padding: ${style.paddingTop} ${style.paddingRight} ${style.paddingBottom} ${style.paddingLeft};
+            `;
+            tempDiv.textContent = textBeforeCaret.replace(/\n$/, '\n\n'); // Add newline for accurate line spacing
+
+            // Append the temp div to the body
+            document.body.appendChild(tempDiv);
+
+            // Get the position of the caret in the textarea
+            const caretRect = tempDiv.getBoundingClientRect();
+            const caretTop = caretRect.top;
+
+            // Clean up the temporary div
+            document.body.removeChild(tempDiv);
+
+            // Calculate the center position of the viewport
+            const viewportCenter = window.innerHeight / 2;
+
+            // Scroll the window to keep the caret in the center of the viewport
+            if (caretTop > viewportCenter || caretTop < viewportCenter) {
+                window.scrollTo(0, windowScrollY + (caretTop - viewportCenter));
+            }
+        }
+    }
+
+
+    async function toggleMarkdown(): Promise<void> {
         if (selectedNote) {
             selectedNote.markdown = !selectedNote.markdown;
+            await tick();
+            autoResizeTextarea();
         }
     }
 
@@ -199,7 +257,9 @@
     function handleKeydown(event: KeyboardEvent): void {
         if (event.ctrlKey && event.key === "e") {
             event.preventDefault();
-            if (selectedNote) toggleMarkdown();
+            if (selectedNote) { 
+                toggleMarkdown();
+            }
         }
         if (event.ctrlKey && event.key === "s") {
             event.preventDefault();
@@ -314,6 +374,8 @@
 
     let selectedNoteId: number | null = null;
     onMount(() => {
+        // Adjust the textarea height on mount
+        autoResizeTextarea(); 
 
         // Check system preferences for dark mode
         loadDarkMode();
@@ -439,6 +501,7 @@
           <button
             class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
             on:click={toggleMarkdown}
+            on:click={autoResizeTextarea}
           >
             {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
           </button>
@@ -467,9 +530,11 @@
           </div>
         {:else}
         <textarea
-            class="w-full h-full border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200"
+            class="w-full h-auto border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200 dark:text-gray-800"
             bind:value={selectedNote.content}
             placeholder="Start writing your note here..."
+            on:input={autoResizeTextarea}
+            bind:this={textareaElement}
         ></textarea>
         {/if}
       {/if}
@@ -477,53 +542,60 @@
   
     <!-- Sticky Tags Section -->
     {#if selectedNote}
-    <div class="sticky bottom-0 bg-gray-100 border-t p-4">
-    <h2 class="text-lg font-bold mb-2">Tags</h2>
-    <div class="flex items-center space-x-2 mb-4">
-        {#each (Array.isArray(selectedNote.tags)
-            ? selectedNote.tags.filter((tag) => tag.trim() !== "")
-            : selectedNote.tags
-            ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
-            : []) as tag}
-        <div
-            class="tag flex items-center px-2 py-1 rounded"
-            class:bg-blue-500={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
-            class:bg-gray-200={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
-            class:text-white={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
-            class:text-gray-800={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
-        >
-            {tag}
-            {#if !selectedNote.markdown}
-            <button
-                class="ml-2 text-red-500 hover:text-red-700"
-                on:click={() => removeTag(tag)}
+<div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote.markdown ? 'h-28' : 'h-16'} px-2 py-2`}>
+    <div class="flex items-center">
+        <h2 class="text-lg font-bold pr-4">Tags</h2>
+        <div class="flex items-center space-x-2 flex-wrap">
+            {#each (Array.isArray(selectedNote.tags)
+                ? selectedNote.tags.filter((tag) => tag.trim() !== "")
+                : selectedNote.tags
+                ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
+                : []) as tag}
+            <div
+                class="tag flex items-center px-2 py-1 rounded"
+                class:bg-blue-500={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
+                class:bg-gray-200={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
+                class:text-white={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
+                class:text-gray-800={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
             >
-                &times;
-            </button>
-            {/if}
+                {tag}
+                {#if !selectedNote.markdown}
+                <button
+                    class="ml-2 text-red-500 hover:text-red-700"
+                    on:click={() => removeTag(tag)}
+                >
+                    &times;
+                </button>
+                {/if}
+            </div>
+            {/each}
         </div>
-        {/each}
     </div>
 
     <!-- Add Tag Input (Only visible in Edit Mode) -->
     {#if !selectedNote.markdown}
-        <div class="flex space-x-2">
+    <div class="flex space-x-2 mt-4 justify-between items-center">
         <input
             type="text"
-            class="border rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="flex-grow border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
             bind:value={newTag}
             placeholder="Add a tag..."
         />
         <button
-            class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            class="flex-shrink-0 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
             on:click={addTag}
         >
             Add Tag
         </button>
-        </div>
-    {/if}
     </div>
     {/if}
+</div>
+{/if}
+
+
+
+
+
   </main>  
 </div>
 
