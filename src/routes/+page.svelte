@@ -98,6 +98,7 @@
         });
     }
 
+
     function selectNote(note: Note): void {
         selectedNote = {
             ...note,
@@ -166,11 +167,14 @@
         }
     }
 
-
+    let lastDeletedNote: Note | null = null;
     async function deleteNote() {
         if (!selectedNote) return;
 
         try {
+            // Save the current note as the last deleted note
+            lastDeletedNote = { ...selectedNote };
+
             // Send delete request to the backend
             await invoke("delete_note", { id: selectedNote.id });
 
@@ -186,6 +190,33 @@
             }
         } catch (error) {
             console.error("Failed to delete note:", error);
+        }
+    }
+
+    async function undoDeleteNote() {
+        if (!lastDeletedNote) return;
+
+        try {
+            // Add the last deleted note back to the backend
+            await invoke("add_note", {
+                title: lastDeletedNote.title,
+                content: lastDeletedNote.content,
+                markdown: lastDeletedNote.markdown,
+                tags: lastDeletedNote.tags,
+            });
+
+            // Fetch the updated notes list
+            await fetchNotes();
+
+            // Select the restored note
+            selectedNote = notes.find(
+                note => note.title === lastDeletedNote!.title && note.content === lastDeletedNote!.content
+            ) || null;
+
+            // Clear the deleted note reference after restoration
+            lastDeletedNote = null;
+        } catch (error) {
+            console.error("Failed to undo delete note:", error);
         }
     }
 
@@ -288,6 +319,10 @@
         if(event.ctrlKey && event.key == "t") {
             event.preventDefault();
             goto('/tags');
+        }
+        if(event.ctrlKey && event.key == "u") {
+            event.preventDefault();
+            undoDeleteNote();
         }
     }
 
@@ -521,8 +556,17 @@
           >
             Delete Note
           </button>
+          {#if lastDeletedNote}
+            <button
+                class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                on:click={undoDeleteNote}
+                >
+                Undo Delete
+            </button>
+          {/if}
         </div>
       {/if}
+      
     </header>
   
     <!-- Content -->
