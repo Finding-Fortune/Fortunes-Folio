@@ -477,7 +477,8 @@
 
             <!-- Dark Mode Button -->
             <button
-                class="flex items-center space-x-2 p-2 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                class="flex items-center space-x-2 p-2 rounded-lg transition-colors
+                    bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200"
                 on:click={toggleDarkMode}
             >
                 <!-- Moon Icon -->
@@ -485,7 +486,7 @@
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
                     viewBox="0 0 24 24"
-                    class="w-5 h-5 text-gray-600 dark:text-gray-300"
+                    class="w-5 h-5 transition-colors text-gray-600 dark:text-gray-200"
                 >
                     <path
                         d="M21.753 15.904a9.005 9.005 0 01-10.796-10.797c.084-.336-.206-.63-.54-.547A10.001 10.001 0 1019.94 19.94c.084-.336-.211-.63-.547-.54z"
@@ -598,21 +599,21 @@
             on:click={toggleMarkdown}
             on:click={autoResizeTextarea}
           >
-            {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
+            {selectedNote.markdown ? "Edit" : "Preview"}
           </button>
           {#if !selectedNote.markdown}
             <button
                 class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 on:click={saveChanges}
             >
-                Save Changes
+                Save
             </button>
           {/if}
           <button
             class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
             on:click={deleteNote}
           >
-            Delete Note
+            Delete
           </button>
           {#if lastDeletedNote}
             <button

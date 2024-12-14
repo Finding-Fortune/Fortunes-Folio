@@ -84,7 +84,7 @@
 
     <!-- Tags Section -->
     <div class="mb-8">
-        <h2 class="text-xl font-bold text-gray-700 mb-4">All Tags</h2>
+        <!-- <h2 class="text-xl font-bold text-gray-700 mb-4">All Tags</h2> -->
         <div class="flex flex-wrap gap-2">
             {#each Array.from(tags).filter(tag => tag.trim() !== "") as tag}
                 <button
@@ -101,7 +101,7 @@
     {#if selectedTag}
         <div>
             <h2 class="text-xl font-bold text-gray-700 mb-4">
-                Notes with tag: <span class="text-indigo-600">{selectedTag}</span>
+                Notes with tag: <span class="text-indigo-600 dark:text-indigo-300">{selectedTag}</span>
             </h2>
             <ul>
                 {#each filteredNotes as note}
@@ -119,3 +119,10 @@
         <p class="text-gray-500">Select a tag to view associated notes.</p>
     {/if}
 </div>
+
+
+<style>
+    :global(html.dark .color-white-100) {
+        color: #f3f4f6; /* Dark equivalent of gray-100 */
+    }
+</style>

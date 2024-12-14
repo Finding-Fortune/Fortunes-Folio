@@ -8,5 +8,16 @@ export default {
     extend: {},
   },
   plugins: [require('@tailwindcss/typography')],
+  darkMode: 'class', // or 'media', depending on your setup
+  theme: {
+    extend: {
+      colors: {
+        indigo: {
+          300: '#a5b4fc', // Ensure this matches Tailwind's default colors
+          600: '#4f46e5', // Ensure this matches Tailwind's default colors
+        },
+      },
+    },
+  },
 }
 
