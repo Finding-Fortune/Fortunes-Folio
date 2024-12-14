@@ -68,44 +68,56 @@
     let selectedNote: Note | null = null;
     let tagSearch = "";
     let newTag = "";
+    let filteredTagSearch: string[] = []; // Filtered tags for autocomplete
+    let isSearchFocused: boolean = false; // Tracks focus on the search input
 
-    function addTag(): void {
+    // Filter tags for the autocomplete dropdown
+    $: filteredTagSearch = [...new Set(tags.filter(tag =>
+        tag.toLowerCase().includes(tagSearch.toLowerCase()) &&
+        tagSearch.trim() !== ''
+    ))];
+
+    // Handle tag selection
+    const selectTag = (tag: string) => {
+        tagSearch = tag; // Set the input value
+        isSearchFocused = false; // Hide the dropdown
+        searchNotesByTag(); // Trigger search with the selected tag
+    };
+
+    async function addTag(): Promise<void> {
         if (selectedNote) {
-            if (newTag.trim() && !selectedNote.tags.includes(newTag.trim())) {
-                selectedNote.tags = [...selectedNote.tags, newTag.trim()];
+            const trimmedTag = newTag.trim();
+            if (trimmedTag && !selectedNote.tags.includes(trimmedTag)) {
+                // Update tags locally
+                selectedNote.tags = [...selectedNote.tags, trimmedTag];
+
+                // Reset input
                 newTag = "";
+
+                // Ensure the change is reflected in the notes list
+                notes = notes.map(note =>
+                    note.id === selectedNote?.id
+                        ? { ...note, tags: selectedNote?.tags }
+                        : note
+                );
+
+                // Optionally, save the change to the backend
+                try {
+                    await invoke("update_note_tags", { id: selectedNote.id, tags: selectedNote.tags });
+                } catch (error) {
+                    console.error("Failed to update tags:", error);
+                }
             }
-            isInputFocused = false;
         }
     }
-
-    function removeTag(tag: string): void {
-        if (selectedNote && Array.isArray(selectedNote.tags)) {
-            selectedNote.tags = selectedNote.tags.filter((t) => t.trim() !== tag.trim());
-        }
-    }
-
-    function filteredNotes(): Note[] {
-        if (!tagSearch.trim()) {
-            return notes;
-        }
-        return notes.filter((note) => {
-            const tags = Array.isArray(note.tags)
-                ? note.tags // Use tags array directly
-                : note.tags.split(",").map((tag) => tag.trim()); // Convert string to array
-            return tags.some((tag) =>
-                tag.toLowerCase().includes(tagSearch.trim().toLowerCase())
-            );
-        });
-    }
-
 
     function selectNote(note: Note): void {
         selectedNote = {
             ...note,
-            tags: typeof note.tags === "string"
-                ? note.tags.split(",").map((tag) => tag.trim())
-                : note.tags,
+            tags: Array.isArray(note.tags)
+                ? note.tags.filter(tag => tag.trim() !== "") // Remove empty tags
+                : note.tags.split(",").map((tag) => tag.trim()).filter(tag => tag !== ""),
+            markdown: true, // Default to Preview Markdown mode
         };
     }
 
@@ -125,8 +137,11 @@
             await fetchNotes();
 
             // Identify the newly added note (assuming it's the last one added)
-            selectedNote = notes[notes.length - 1];
-            selectedNote.markdown = false;
+            selectedNote = {
+                ...notes[notes.length - 1],
+                markdown: false,
+                tags: [], // Ensure no empty tags are present
+            };
         } catch (error) {
             console.error("Failed to add note:", error);
         }
@@ -326,19 +341,10 @@
         }
     }
 
-    async function searchNotesByTag() {
+    async function searchNotesByTag(): Promise<void> {
         if (!tagSearch.trim()) {
             // Fetch all notes if search input is empty
-            try {
-                notes = (await invoke("get_notes")) as Note[];
-                if (notes.length > 0) {
-                    selectedNote = { ...notes[0], markdown: true }; // Default to markdown mode
-                } else {
-                    selectedNote = null;
-                }
-            } catch (error) {
-                console.error("Failed to fetch all notes:", error);
-            }
+            await fetchNotes();
             return;
         }
 
@@ -346,19 +352,15 @@
             const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch.trim() })) as Note[];
             notes = filtered;
 
-            if (notes.length > 0) {
-                selectedNote = { ...notes[0], markdown: true }; // Default to markdown mode
-            } else {
-                selectedNote = null;
-            }
+            // Reset selected note if none matches the search
+            selectedNote = notes.length > 0 ? { ...notes[0], markdown: true } : null;
         } catch (error) {
             console.error("Failed to search notes by tag:", error);
         }
     }
 
-
   // Fetch notes from the backend
-  async function fetchNotes() {
+    async function fetchNotes() {
         try {
             const rawNotes = (await invoke("get_notes")) as Note[];
             notes = rawNotes.map((note) => ({
@@ -465,11 +467,14 @@
 
 <div class="flex flex-grow bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar -->
-    <aside style="width: var(--sidebar-width, 25%);" class="w-1/4 bg-gray-800 text-white p-4 flex flex-col">
+    <aside
+        class="w-1/4 bg-gray-800 text-white p-4 flex flex-col h-screen"
+        style="max-height: calc(100vh - 32px);"
+    >
         <div class="flex items-center justify-between mb-6">
             <!-- Notes Header -->
             <h2 class="text-2xl font-bold">Notes</h2>
-        
+
             <!-- Dark Mode Button -->
             <button
                 class="flex items-center space-x-2 p-2 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
@@ -487,27 +492,52 @@
                     />
                 </svg>
             </button>
-        </div>        
+        </div>
 
         <!-- Search by Tag -->
-        <div class="mb-4">
+        <div class="relative mb-4">
             <input
                 type="text"
                 class="w-full p-2 rounded-lg text-gray-900"
                 bind:value={tagSearch}
                 placeholder="Search by tag..."
+                on:focus={() => (isSearchFocused = true)}
+                on:blur={() => setTimeout(() => (isSearchFocused = false), 150)}
                 on:input={searchNotesByTag}
             />
+            <!-- Autocomplete Dropdown -->
+            {#if filteredTagSearch.length > 0 && isSearchFocused}
+            <ul
+                class="autocomplete absolute top-full mt-1 left-0 w-full bg-white border rounded-lg z-10 shadow-md"
+            >
+                {#each filteredTagSearch as tag (tag)}
+                <li>
+                    <button
+                        class="px-2 py-1 w-full text-left cursor-pointer hover:bg-blue-100 focus:outline-none"
+                        on:click={() => selectTag(tag)}
+                        on:keydown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                selectTag(tag);
+                            }
+                        }}
+                    >
+                        {tag}
+                    </button>
+                </li>
+                {/each}
+            </ul>
+            {/if}
         </div>
 
         <!-- Notes List -->
-        <ul class="flex-1 overflow-y-auto">
+        <ul class="flex-1 overflow-y-auto max-h-full">
             {#if notes.length > 0}
                 {#each notes as note (note.id)}
                     <li>
                         <button
                             class="w-full text-left p-3 rounded-lg mb-2 cursor-pointer bg-gray-700 hover:bg-gray-600"
-                            on:click={() => (selectedNote = note)}
+                            on:click={() => selectNote(note)}
                         >
                             <h3 class="text-lg font-semibold">{note.title}</h3>
                             <p class="text-sm text-gray-300 truncate">{note.content}</p>
@@ -518,6 +548,7 @@
                 <p class="text-gray-400">No notes found.</p>
             {/if}
         </ul>
+
         <button
             class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
             on:click={addNewNote}
@@ -531,6 +562,8 @@
             View Tags
         </button>
     </aside>
+
+    
 
     <!-- Resizable handle -->
     <button

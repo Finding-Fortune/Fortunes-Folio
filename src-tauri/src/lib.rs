@@ -146,6 +146,9 @@ fn add_note(
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
 
+    // Filter out empty tags
+    let valid_tags: Vec<String> = tags.into_iter().filter(|tag| !tag.trim().is_empty()).collect();
+
     // Insert the new note
     conn.execute(
         "INSERT INTO notes (title, content, markdown) VALUES (?1, ?2, ?3)",
@@ -159,7 +162,7 @@ fn add_note(
         .map_err(|e| format!("Failed to retrieve new note ID: {}", e))?;
 
     // Process and associate tags
-    for tag in tags {
+    for tag in valid_tags {
         conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", [&tag])
             .map_err(|e| format!("Failed to insert tag: {}", e))?;
 
