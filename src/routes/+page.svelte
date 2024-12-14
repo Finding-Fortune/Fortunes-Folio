@@ -635,15 +635,16 @@
     </header>
   
     <!-- Content -->
-    <div class="p-4 flex-1 bg-gray-50 overflow-y-auto dark:bg-gray-900">
+    <div class="flex-1 flex flex-col min-h-100 bg-gray-50 overflow-y-auto dark:bg-gray-900">
       {#if selectedNote}
         {#if selectedNote.markdown}
-          <div class="prose max-w-none mb-16">
+          <div style="flex: 1; min-height: auto;" class="p-4 prose max-w-none mb-8">
             {@html marked(selectedNote.content)}
           </div>
         {:else}
         <textarea
-            class="w-full h-auto border rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white dark:bg-gray-200 dark:text-gray-800"
+            style="flex: 1; min-height: auto;" 
+            class="flex-1 w-full h-auto border rounded-lg p-4 focus:outline-none resize-none bg-white dark:bg-gray-200 dark:text-gray-800"
             bind:value={selectedNote.content}
             placeholder="Start writing your note here..."
             on:input={autoResizeTextarea}
@@ -651,44 +652,44 @@
         ></textarea>
         {/if}
       {/if}
-    </div>
-  
-    <!-- Sticky Tags Section -->
-    <div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote?.markdown ? 'h-28' : 'h-16'} px-2 pt-4`}>
+      <!-- Sticky Tags Section -->
+    <div style="padding: 20px 0.5rem;" class={`h-auto bg-gray-100 border-t flex flex-col ${!selectedNote?.markdown ? 'h-28 sticky bottom-0' : 'h-16'} px-2 pt-2`}>
         <div class="flex items-center">
-            <h2 class="text-lg font-bold pr-4">Tags</h2>
-            <div class="flex items-center space-x-2 flex-wrap">
+            <h2 class="text-lg font-bold pr-2">Tags</h2>
+            <div style="max-height: 100px; overflow-y: auto;" class="flex items-center space-x-2 flex-wrap">
                 {#if selectedNote}
                     {#each selectedNote?.tags as tag (tag)}
-                        <div
-                            class="tag flex items-center px-2 py-1 rounded"
-                            class:bg-blue-500={!selectedNote.markdown && tag.includes(newTag.trim())}
-                            class:bg-gray-200={!selectedNote.markdown && !tag.includes(newTag.trim())}
-                            class:text-white={!selectedNote.markdown && tag.includes(newTag.trim())}
-                            class:text-gray-800={!selectedNote.markdown && !tag.includes(newTag.trim())}
-                        >
-                            {tag}
-                            {#if !selectedNote.markdown}
-                                <button
-                                    class="ml-2 text-red-500 hover:text-red-700"
-                                    on:click={() => {
-                                        if (Array.isArray(selectedNote!.tags)) {
-                                            // If tags is already an array, filter it
-                                            selectedNote!.tags = selectedNote!.tags.filter(t => t !== tag);
-                                        } else if (typeof selectedNote!.tags === 'string') {
-                                            // If tags is a string, split it into an array, filter, and rejoin
-                                            selectedNote!.tags = selectedNote!.tags
-                                                .split(',')
-                                                .map(t => t.trim())
-                                                .filter(t => t !== tag)
-                                                .join(', ');
-                                        }
-                                    }}
-                                >
-                                    &times;
-                                </button>
-                            {/if}
-                        </div>
+                        {#if tag.trim() !== ""}
+                            <div
+                                class="tag flex items-center px-2 py-1 my-2 rounded"
+                                class:bg-blue-500={!selectedNote.markdown && tag.includes(newTag.trim())}
+                                class:bg-gray-200={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                                class:text-white={!selectedNote.markdown && tag.includes(newTag.trim())}
+                                class:text-gray-800={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                            >
+                                {tag}
+                                {#if !selectedNote.markdown}
+                                    <button
+                                        class="ml-2 text-red-500 hover:text-red-700"
+                                        on:click={() => {
+                                            if (Array.isArray(selectedNote!.tags)) {
+                                                // If tags is already an array, filter it
+                                                selectedNote!.tags = selectedNote!.tags.filter(t => t !== tag);
+                                            } else if (typeof selectedNote!.tags === 'string') {
+                                                // If tags is a string, split it into an array, filter, and rejoin
+                                                selectedNote!.tags = selectedNote!.tags
+                                                    .split(',')
+                                                    .map(t => t.trim())
+                                                    .filter(t => t !== tag)
+                                                    .join(', ');
+                                            }
+                                        }}
+                                    >
+                                        &times;
+                                    </button>
+                                {/if}
+                            </div>
+                        {/if}
                     {/each}
                 {:else if tagSearch.trim()}
                     <!-- Show placeholder if no note is selected -->
@@ -746,6 +747,7 @@
         </div>
         {/if}
     </div>
+    </div>
   </main>  
 </div>
 
@@ -758,10 +760,11 @@
     color: #1f2937;
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
-    margin-right: 0.5rem;
+    margin-left: 0.25rem !important;
+    margin-right: 0.25rem !important;
 }
 .tag button {
-    margin-left: 0.5rem;
+    /* margin-left: 0.5rem; */
     background: none;
     border: none;
     color: #ef4444;
