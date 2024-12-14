@@ -278,6 +278,26 @@ fn search_notes_by_tag(state: tauri::State<AppState>, tag: String) -> Vec<Note> 
     notes_iter.filter_map(|res| res.ok()).collect()
 }
 
+#[tauri::command]
+fn get_tags(state: tauri::State<AppState>) -> Result<Vec<String>, String> {
+    let conn = state.conn.lock().unwrap();
+    let mut stmt = conn
+        .prepare("SELECT DISTINCT name FROM tags ORDER BY name")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let tags_iter = stmt
+        .query_map([], |row| row.get(0))
+        .map_err(|e| format!("Failed to query tags: {}", e))?;
+
+    let mut tags = vec![];
+    for tag in tags_iter {
+        tags.push(tag.map_err(|e| format!("Failed to get tag: {}", e))?);
+    }
+
+    Ok(tags)
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -290,6 +310,7 @@ pub fn run() {
             search_notes_by_tag,
             get_dark_mode,
             set_dark_mode,
+            get_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

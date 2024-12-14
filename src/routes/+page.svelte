@@ -75,6 +75,7 @@
                 selectedNote.tags = [...selectedNote.tags, newTag.trim()];
                 newTag = "";
             }
+            isInputFocused = false;
         }
     }
 
@@ -143,7 +144,6 @@
                     : selectedNote.tags
                     ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
                     : [];
-                    console.log("Saving tags:", validTags);
 
                 await invoke("update_note", {
                     id: selectedNote.id,
@@ -332,7 +332,7 @@
             try {
                 notes = (await invoke("get_notes")) as Note[];
                 if (notes.length > 0) {
-                    selectedNote = notes[0];
+                    selectedNote = { ...notes[0], markdown: true }; // Default to markdown mode
                 } else {
                     selectedNote = null;
                 }
@@ -345,8 +345,9 @@
         try {
             const filtered = (await invoke("search_notes_by_tag", { tag: tagSearch.trim() })) as Note[];
             notes = filtered;
+
             if (notes.length > 0) {
-                selectedNote = notes[0]; // Select the first filtered note
+                selectedNote = { ...notes[0], markdown: true }; // Default to markdown mode
             } else {
                 selectedNote = null;
             }
@@ -354,7 +355,6 @@
             console.error("Failed to search notes by tag:", error);
         }
     }
-
 
 
   // Fetch notes from the backend
@@ -411,8 +411,31 @@
         }
     }
 
+
+    let tags: string[] = []; // List of all existing tags
+    let filteredTags  = []; // Filtered tags for autocomplete
+    let isInputFocused: boolean = false; // Track input focus state
+
+    // Fetch all tags from the backend
+    const fetchTags = async () => {
+        try {
+            tags = await invoke<string[]>('get_tags');
+        } catch (error) {
+            console.error('Failed to fetch tags:', error);
+        }
+    };
+
+    // Filter existing tags based on input
+    $: filteredTags = tags
+        .filter(tag =>
+            tag.toLowerCase().includes(newTag.toLowerCase()) &&
+            newTag.trim() !== '' &&
+            (!selectedNote?.tags || !selectedNote.tags.includes(tag))
+        );
+
     let selectedNoteId: number | null = null;
     onMount(() => {
+        fetchTags()
         // Adjust the textarea height on mount
         autoResizeTextarea(); 
 
@@ -589,61 +612,98 @@
     </div>
   
     <!-- Sticky Tags Section -->
-    {#if selectedNote}
-<div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote.markdown ? 'h-28' : 'h-16'} px-2 pt-4`}>
-    <div class="flex items-center">
-        <h2 class="text-lg font-bold pr-4">Tags</h2>
-        <div class="flex items-center space-x-2 flex-wrap">
-            {#each (Array.isArray(selectedNote.tags)
-                ? selectedNote.tags.filter((tag) => tag.trim() !== "")
-                : selectedNote.tags
-                ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
-                : []) as tag}
-            <div
-                class="tag flex items-center px-2 py-1 rounded"
-                class:bg-blue-500={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
-                class:bg-gray-200={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
-                class:text-white={tag.toLowerCase().includes(tagSearch.trim().toLowerCase()) && tagSearch.trim() !== ""}
-                class:text-gray-800={!tagSearch || !tag.toLowerCase().includes(tagSearch.trim().toLowerCase())}
-            >
-                {tag}
-                {#if !selectedNote.markdown}
-                <button
-                    class="ml-2 text-red-500 hover:text-red-700"
-                    on:click={() => removeTag(tag)}
-                >
-                    &times;
-                </button>
+    <div class={`sticky bottom-0 bg-gray-100 border-t flex flex-col ${!selectedNote?.markdown ? 'h-28' : 'h-16'} px-2 pt-4`}>
+        <div class="flex items-center">
+            <h2 class="text-lg font-bold pr-4">Tags</h2>
+            <div class="flex items-center space-x-2 flex-wrap">
+                {#if selectedNote}
+                    {#each selectedNote?.tags as tag (tag)}
+                        <div
+                            class="tag flex items-center px-2 py-1 rounded"
+                            class:bg-blue-500={!selectedNote.markdown && tag.includes(newTag.trim())}
+                            class:bg-gray-200={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                            class:text-white={!selectedNote.markdown && tag.includes(newTag.trim())}
+                            class:text-gray-800={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                        >
+                            {tag}
+                            {#if !selectedNote.markdown}
+                                <button
+                                    class="ml-2 text-red-500 hover:text-red-700"
+                                    on:click={() => {
+                                        if (Array.isArray(selectedNote!.tags)) {
+                                            // If tags is already an array, filter it
+                                            selectedNote!.tags = selectedNote!.tags.filter(t => t !== tag);
+                                        } else if (typeof selectedNote!.tags === 'string') {
+                                            // If tags is a string, split it into an array, filter, and rejoin
+                                            selectedNote!.tags = selectedNote!.tags
+                                                .split(',')
+                                                .map(t => t.trim())
+                                                .filter(t => t !== tag)
+                                                .join(', ');
+                                        }
+                                    }}
+                                >
+                                    &times;
+                                </button>
+                            {/if}
+                        </div>
+                    {/each}
+                {:else if tagSearch.trim()}
+                    <!-- Show placeholder if no note is selected -->
+                    <p class="text-gray-500 italic">No matching notes found for tag "{tagSearch.trim()}".</p>
                 {/if}
             </div>
-            {/each}
         </div>
+    
+        {#if !selectedNote?.markdown}
+        <div class="relative mt-4">
+            <div class="flex space-x-2 items-center">
+                <input
+                    type="text"
+                    class="flex-grow border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    bind:value={newTag}
+                    placeholder="Add a tag..."
+                    on:focus={() => (isInputFocused = true)}
+                    on:blur={() => setTimeout(() => (isInputFocused = false), 150)} 
+                />
+                <button
+                    class="flex-shrink-0 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
+                    on:click={addTag}
+                >
+                    Add Tag
+                </button>
+            </div>
+    
+            <!-- Autocomplete Dropdown -->
+            {#if filteredTags.length > 0 && isInputFocused}
+                <ul
+                    class="absolute bottom-full mb-1 left-0 w-full bg-white border rounded-lg z-10 shadow-md"
+                >
+                    {#each filteredTags as tag (tag)}
+                    <li>
+                        <button
+                            class="px-2 py-1 w-full text-left cursor-pointer hover:bg-blue-100 focus:outline-none"
+                            on:click={() => {
+                                newTag = tag; // Set the input value to the selected suggestion
+                                isInputFocused = true; // Keep the dropdown visible for further input
+                            }}
+                            on:keydown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault(); // Prevent form submission or default button behavior
+                                    newTag = tag; // Set the input value to the selected suggestion
+                                    isInputFocused = true; // Keep the dropdown visible
+                                }
+                            }}
+                        >
+                            {tag}
+                        </button>
+                    </li>
+                    {/each}
+                </ul>            
+            {/if}
+        </div>
+        {/if}
     </div>
-
-    <!-- Add Tag Input (Only visible in Edit Mode) -->
-    {#if !selectedNote.markdown}
-    <div class="flex space-x-2 mt-4 justify-between items-center">
-        <input
-            type="text"
-            class="flex-grow border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            bind:value={newTag}
-            placeholder="Add a tag..."
-        />
-        <button
-            class="flex-shrink-0 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
-            on:click={addTag}
-        >
-            Add Tag
-        </button>
-    </div>
-    {/if}
-</div>
-{/if}
-
-
-
-
-
   </main>  
 </div>
 
@@ -755,6 +815,17 @@ aside {
 
 .w-1:hover {
   background-color: rgb(55 65 81); /* Gray-700 */
+}
+
+ul.autocomplete {
+    max-height: 200px; /* Limit dropdown height */
+    overflow-y: auto; /* Add a scroll bar if too many items */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    background-color: white; /* Ensure it stands out */
+}
+ul.autocomplete li {
+    font-size: 0.875rem; /* Adjust text size */
+    line-height: 1.25rem; /* Adjust line height */
 }
 </style>
 

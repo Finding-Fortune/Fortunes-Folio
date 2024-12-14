@@ -18,3 +18,6 @@ bun run tauri dev
 
 bun run tauri:dev
 - Runs svelte.js hot reloading with tailwind.css hot reloading
+
+cargo tauri build
+- Make a release
