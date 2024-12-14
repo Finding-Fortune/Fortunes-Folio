@@ -600,12 +600,14 @@
           >
             {selectedNote.markdown ? "Edit as Text" : "Preview Markdown"}
           </button>
-          <button
-            class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-            on:click={saveChanges}
-          >
-            Save Changes
-          </button>
+          {#if !selectedNote.markdown}
+            <button
+                class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                on:click={saveChanges}
+            >
+                Save Changes
+            </button>
+          {/if}
           <button
             class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
             on:click={deleteNote}
@@ -814,7 +816,7 @@
     color: var(--text-color);
 }
 
-:global(html.dark p, html.dark h3, html.dark h4, html.dark h1, html.dark h5) {
+:global(html.dark p, html.dark h2, html.dark h3, html.dark h4, html.dark h1, html.dark h5) {
     color: var(--text-color);
 }
 
