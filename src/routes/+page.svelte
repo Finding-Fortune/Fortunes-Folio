@@ -31,19 +31,37 @@
         }
     }
 
+    let isAnimating = false;
     function resize(event: MouseEvent): void {
-        if (isResizing) {
-            const dx = event.clientX - startX;
+        if (isResizing && !isAnimating) {
+            isAnimating = true;
 
-            const sidebar = document.querySelector("aside") as HTMLElement | null;
-            if (sidebar) {
-                const newWidth = Math.min(
-                Math.max(startWidth + dx, 200), // Minimum width
-                window.innerWidth * 0.5 // Maximum width (50% of viewport)
-                );
+            requestAnimationFrame(() => {
+                const dx = event.clientX - startX;
 
-                document.documentElement.style.setProperty("--sidebar-width", `${newWidth}px`);
-            }
+                const sidebar = document.querySelector("aside") as HTMLElement | null;
+                if (sidebar) {
+                    let newWidth = startWidth + dx;
+
+                    // Explicitly handle resizing from 0px to a positive width
+                    if (newWidth < 1) {
+                        newWidth = 0;
+                    } else {
+                        newWidth = Math.min(newWidth, window.innerWidth * 0.5); // Cap at 50vw
+                    }
+
+                    // Disable transitions if resizing from 0px
+                    if (parseFloat(getComputedStyle(sidebar).width) === 0) {
+                        sidebar.style.transition = "none"; // Temporarily disable transitions
+                    } else {
+                        sidebar.style.transition = ""; // Restore transitions
+                    }
+
+                    // Update CSS variable
+                    document.documentElement.style.setProperty("--sidebar-width", `${newWidth}px`);
+                }
+                isAnimating = false;
+            });
         }
     }
 
@@ -543,7 +561,7 @@
         <ul class="flex-1 overflow-y-auto max-h-full">
             {#if notes.length > 0}
                 {#each notes as note (note.id)}
-                    <li style="max-width: 500px;">
+                    <li style="min-width: 100%; max-width: 500px;">
                         <button
                             class="w-full text-left p-3 rounded-lg mb-2 cursor-pointer bg-gray-700 hover:bg-gray-600"
                             on:click={() => selectNote(note)}
@@ -848,9 +866,8 @@
 }
 
 aside {
-  transition: width 0.2s ease-in-out;
   width: var(--sidebar-width);
-transition: width 0.2s ease-in-out;
+  max-width: var(--sidebar-width);
 }
 
 .w-1 {
@@ -858,6 +875,8 @@ transition: width 0.2s ease-in-out;
   background-color: rgb(75 85 99); /* Gray-600 */
   cursor: col-resize;
   user-select: none;
+  position: relative; /* Keep handle positioned correctly */
+  z-index: 10; /* Ensure handle is above other elements */
 }
 
 .w-1:hover {
