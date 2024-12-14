@@ -64,7 +64,7 @@
 >
   <!-- App Title -->
   <div class="flex items-center space-x-2">
-    <span class="text-sm font-medium">Fortune's Notes</span>
+    <span class="text-sm font-medium">Fortune's Folio</span>
   </div>
 
   <!-- Window Buttons -->
