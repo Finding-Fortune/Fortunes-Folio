@@ -379,17 +379,26 @@
     }
 
     // Store for dark mode
-    export const darkMode = writable(false);
+    export const darkMode = writable(true);
 
     // Toggle dark mode
     async function loadDarkMode() {
         const enabled = await invoke<boolean>('get_dark_mode');
         darkMode.set(enabled);
+
+        // Save the dark mode state in localStorage
+        localStorage.setItem('darkMode', enabled ? 'true' : 'false');
+
         if (enabled) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
+
+        // Force a tick to ensure the DOM re-renders
+        await tick();
+
+        console.log(get(darkMode))
     }
 
     async function toggleDarkMode() {
@@ -397,6 +406,8 @@
         const newMode = !currentMode;
 
         darkMode.set(newMode); // Update the store immediately for UI responsiveness
+
+        localStorage.setItem('darkMode', newMode ? 'true' : 'false');
 
         // Persist the new mode to the backend
         try {
@@ -437,12 +448,11 @@
 
     let selectedNoteId: number | null = null;
     onMount(() => {
+        // Check system preferences for dark mode
+        loadDarkMode();
         fetchTags()
         // Adjust the textarea height on mount
         autoResizeTextarea(); 
-
-        // Check system preferences for dark mode
-        loadDarkMode();
 
         // Wrap the async logic in a self-invoking function
         (async () => {
@@ -478,7 +488,7 @@
             <!-- Dark Mode Button -->
             <button
                 class="flex items-center space-x-2 p-2 rounded-lg transition-colors
-                    bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200"
+                    bg-gray-200 text-gray-600 hover:!bg-gray-300 dark:!bg-gray-600 dark:!text-gray-200"
                 on:click={toggleDarkMode}
             >
                 <!-- Moon Icon -->
