@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, tick } from "svelte";
     import { goto } from '$app/navigation';
     import { invoke } from '@tauri-apps/api/core';
+    import { writable } from 'svelte/store';
 
     interface Note {
         id: number;
@@ -62,7 +63,35 @@
         }
     }
 
+    // Store for dark mode
+    export const darkMode = writable(true);
+
+    // Toggle dark mode
+    async function loadDarkMode() {
+        // Check localStorage for dark mode state immediately
+        const localStorageMode = localStorage.getItem('darkMode') === 'true';
+        darkMode.set(localStorageMode);
+
+        // Apply the `dark` or `light` class immediately based on localStorage
+        document.documentElement.classList.toggle('dark', localStorageMode);
+        document.documentElement.classList.toggle('light', !localStorageMode);
+
+        // Fetch the dark mode state from the backend asynchronously
+        const enabled = await invoke<boolean>('get_dark_mode');
+        darkMode.set(enabled);
+
+        // Update localStorage and apply the class again if needed
+        localStorage.setItem('darkMode', enabled ? 'true' : 'false');
+        document.documentElement.classList.toggle('dark', enabled);
+        document.documentElement.classList.toggle('light', !enabled);
+
+        // Force a tick to ensure the DOM re-renders
+        await tick();
+    }
+    loadDarkMode()
+
     onMount(() => {
+        loadDarkMode()
         fetchNotes();
         window.addEventListener("keydown", handleKeydown);
         return () => {
@@ -122,7 +151,60 @@
 
 
 <style>
+    :global(html.dark) {
+        --bg-color: #1f2937; /* Dark background color */
+        --text-color: #f3f4f6; /* Light text color */
+        --border-color: #374151; /* Dark border color */
+    }
+
+    :global(html.dark body) {
+        background-color: var(--bg-color) !important;
+        color: var(--text-color) !important;
+    }
+
     :global(html.dark .color-white-100) {
         color: #f3f4f6; /* Dark equivalent of gray-100 */
+    }
+
+    :global(html.dark .bg-gray-100) {
+        background-color: #1f2937; /* Dark equivalent of gray-100 */
+    }
+
+    :global(html.dark .bg-gray-50) {
+        background-color: #2d3748; /* Dark equivalent of gray-50 */
+    }
+
+    :global(html.dark .text-gray-900) {
+        color: #f3f4f6; /* Light equivalent of gray-900 */
+    }
+
+    :global(html.dark .text-gray-800) {
+        color: #e2e8f0; /* Light equivalent of gray-800 */
+    }
+
+    :global(html.dark .border) {
+        border-color: var(--border-color);
+    }
+
+    :global(html.dark button) {
+        background-color: #374151; /* Dark button background */
+        color: var(--text-color);
+    }
+
+    :global(html.dark p, html.dark h2, html.dark h3, html.dark h4, html.dark h1, html.dark h5) {
+        color: var(--text-color);
+    }
+
+    :global(html.dark button:hover) {
+        background-color: #4b5563; /* Dark button hover */
+    }
+
+    :global(html.dark header) {
+        background-color: #1f2937 !important; /* Equivalent to dark:bg-gray-800 */
+        color: #f3f4f6 !important; /* Equivalent to dark:text-white */
+    }
+    :global(html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark li) {
+        background-color: #2d3748 !important; /* Equivalent to dark:bg-gray-800 */
+        color: #f3f4f6 !important; /* Equivalent to dark:text-white */
     }
 </style>
