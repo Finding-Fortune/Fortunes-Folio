@@ -397,8 +397,6 @@
 
         // Force a tick to ensure the DOM re-renders
         await tick();
-
-        console.log(get(darkMode))
     }
 
     async function toggleDarkMode() {
@@ -545,7 +543,7 @@
         <ul class="flex-1 overflow-y-auto max-h-full">
             {#if notes.length > 0}
                 {#each notes as note (note.id)}
-                    <li>
+                    <li style="max-width: 500px;">
                         <button
                             class="w-full text-left p-3 rounded-lg mb-2 cursor-pointer bg-gray-700 hover:bg-gray-600"
                             on:click={() => selectNote(note)}
@@ -573,8 +571,6 @@
             View Tags
         </button>
     </aside>
-
-    
 
     <!-- Resizable handle -->
     <button
@@ -850,6 +846,8 @@
 
 aside {
   transition: width 0.2s ease-in-out;
+  width: var(--sidebar-width);
+transition: width 0.2s ease-in-out;
 }
 
 .w-1 {

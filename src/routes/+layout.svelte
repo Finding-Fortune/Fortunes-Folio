@@ -3,7 +3,7 @@
     import TitleBar from "../components/TitleBar.svelte"
 </script>
 
-<div class="min-h-screen flex flex-col overflow-hidden">
+<div class="min-h-screen max-h-screen flex flex-col overflow-hidden">
     <!-- Fixed Title Bar -->
     <TitleBar />
 
