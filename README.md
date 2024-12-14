@@ -1,5 +1,5 @@
 # Fortune's Folio
-An app to take your notes, minimalistically. Built with Sveltekit + Tauri
+An app to take your notes, minimalistically, focused around the idea of "tagging" your notes. Good for making thought bubbles. Built with Sveltekit + Tauri
 
 ## Features To-Do
 - On the "View Tags" page, be able to click a red X on a tag to bring open a deletion dialogue. 
