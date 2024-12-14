@@ -100,7 +100,7 @@
     });
 </script>
 
-<div class="flex-grow bg-gray-100 p-6">
+<div style="max-width: 100vw;" class="flex-grow bg-gray-100 p-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">Tags</h1>
         <button
@@ -134,13 +134,16 @@
             </h2>
             <ul>
                 {#each filteredNotes as note}
-                    <li
-                        class="mb-4 p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer"
-                        on:click={() => handleNoteClick(note.id)}
-                    >
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">{note.title}</h3>
-                        <p class="text-sm text-gray-600 truncate">{note.content}</p>
-                    </li>
+                    <li class="mb-4">
+                        <button
+                            type="button"
+                            class="w-full p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer text-left"
+                            on:click={() => handleNoteClick(note.id)}
+                        >
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">{note.title}</h3>
+                            <p class="text-sm text-gray-600 truncate">{note.content}</p>
+                        </button>
+                    </li>                
                 {/each}
             </ul>
         </div>
