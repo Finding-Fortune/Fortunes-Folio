@@ -5,6 +5,7 @@
 
 ## Features
 - **Markdown Support:** Write and format notes effortlessly using Markdown.
+- **Dark Mode:** Toggle light and dark modes with a single click. 
 - **Tags System:** Organize notes with tags for quick and easy filtering.
 - **Tag Management:** View all tags on the "View Tags" page and see notes associated with any tag. Click a note to jump to it.
 - **Tag Search:** Filter notes dynamically by searching for specific tags.
