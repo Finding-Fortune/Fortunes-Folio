@@ -206,7 +206,7 @@
         background-color: #1f2937 !important; /* Equivalent to dark:bg-gray-800 */
         color: #f3f4f6 !important; /* Equivalent to dark:text-white */
     }
-    :global(html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark li) {
+    :global(html.dark textarea, html.dark input, html.dark .tag, html.dark li) {
         background-color: #2d3748 !important; /* Equivalent to dark:bg-gray-800 */
         color: #f3f4f6 !important; /* Equivalent to dark:text-white */
     }
