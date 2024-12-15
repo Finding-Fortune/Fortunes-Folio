@@ -699,7 +699,7 @@
     <div class="flex-1 flex flex-col min-h-100 bg-gray-50 overflow-y-auto dark:bg-gray-900">
       {#if selectedNote}
         {#if selectedNote.markdown}
-          <div style="flex: 1; min-height: auto;" class="p-4 prose max-w-none mb-8">
+          <div style="flex: 1; min-height: auto; white-space: normal; word-wrap: break-word;" class="p-4 prose max-w-none mb-8">
             {@html marked(selectedNote.content)}
           </div>
         {:else}
