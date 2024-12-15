@@ -662,7 +662,7 @@
       {#if selectedNote}
         <div class="flex-none ml-4 flex space-x-4">
           <button
-            class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+            class="font-semibold p-2 bg-green-600 text-white rounded-lg hover:bg-yellow-600"
             on:click={toggleMarkdown}
             on:click={autoResizeTextarea}
           >
@@ -670,14 +670,14 @@
           </button>
           {#if !selectedNote.markdown}
             <button
-                class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                class="font-semibold p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 on:click={saveChanges}
             >
                 Save
             </button>
           {/if}
           <button
-            class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+            class="font-semibold p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
             on:click={deleteNote}
           >
             Delete
@@ -723,11 +723,12 @@
                     {#each selectedNote?.tags as tag (tag)}
                         {#if tag.trim() !== ""}
                             <div
+                                style="background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));"
                                 class="tag flex items-center px-2 py-1 my-2 rounded"
                                 class:bg-blue-500={!selectedNote.markdown && tag.includes(newTag.trim())}
-                                class:bg-gray-200={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                                class:bg-gray-200={selectedNote.markdown && !tag.includes(newTag.trim())}
                                 class:text-white={!selectedNote.markdown && tag.includes(newTag.trim())}
-                                class:text-gray-800={!selectedNote.markdown && !tag.includes(newTag.trim())}
+                                class:text-gray-800={selectedNote.markdown && !tag.includes(newTag.trim())}
                             >
                                 {tag}
                                 {#if !selectedNote.markdown}

@@ -134,10 +134,10 @@
             </h2>
             <ul>
                 {#each filteredNotes as note}
-                    <li class="mb-4" style="max-height: 100px; overflow: auto;">
+                    <li class="mb-4" style="background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1)); max-height: 100px; overflow: auto;">
                         <button
                             type="button"
-                            class="w-full p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer text-left"
+                            class="w-full p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer text-left"
                             on:click={() => handleNoteClick(note.id)}
                         >
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">{note.title}</h3>
