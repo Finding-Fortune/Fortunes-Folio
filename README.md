@@ -1,5 +1,5 @@
 # Fortune's Folio
-**Minimalist note-taking. Built with SvelteKit and Tauri, with a Rust back-end.**
+**Minimalist note-taking.**
 
 ![Preview of the App](static/example-app.png)
 
