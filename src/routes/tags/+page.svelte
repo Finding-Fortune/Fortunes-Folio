@@ -112,25 +112,36 @@
     </div>
 
     <!-- Tags Section -->
-    <div class="mb-8">
-        <!-- <h2 class="text-xl font-bold text-gray-700 mb-4">All Tags</h2> -->
-        <div class="flex flex-wrap gap-2">
-            {#each Array.from(tags).filter(tag => tag.trim() !== "") as tag}
-                <button
-                    class="px-3 py-1 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition"
-                    on:click={() => filterNotesByTag(tag)}
-                >
-                    {tag}
-                </button>
-            {/each}
+    <div class="mb-4">
+        <div
+          class="flex flex-wrap gap-2 overflow-auto max-h-64 p-2 rounded-lg"
+        >
+          {#each Array.from(tags).filter(tag => tag.trim() !== "") as tag}
+            <button
+              class="px-3 py-1 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition truncate max-w-[150px]"
+              title={tag} 
+              on:click={() => filterNotesByTag(tag)}
+            >
+              {tag}
+            </button>
+          {/each}
         </div>
-    </div>
+      </div>
+      
 
     <!-- Notes List -->
     {#if selectedTag}
         <div>
             <h2 class="text-xl font-bold text-gray-700 mb-4">
-                Notes with tag: <span class="text-indigo-600 dark:text-indigo-300">{selectedTag}</span>
+                Notes with tag: <span
+                style="display: inline-block; max-width: 100%; overflow: auto; white-space: nowrap;"
+                class="text-indigo-600 dark:text-indigo-300"
+                title={selectedTag} 
+              >
+                {selectedTag}
+              </span>
+              
+              
             </h2>
             <ul>
                 {#each filteredNotes as note}

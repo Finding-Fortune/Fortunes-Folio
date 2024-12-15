@@ -723,7 +723,7 @@
                     {#each selectedNote?.tags as tag (tag)}
                         {#if tag.trim() !== ""}
                             <div
-                                style="background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));"
+                                style="max-width: 250px; overflow-x: auto; background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));"
                                 class="tag flex items-center px-2 py-1 my-2 rounded"
                                 class:bg-blue-500={!selectedNote.markdown && tag.includes(newTag.trim())}
                                 class:bg-gray-200={selectedNote.markdown && !tag.includes(newTag.trim())}
