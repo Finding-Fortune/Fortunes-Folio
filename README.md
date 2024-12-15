@@ -25,7 +25,6 @@
 - **`CTRL + E`**: Edit the current note.
 - **`CTRL + F`**: Toggle fullscreen mode.
 - **`CTRL + M`**: Minimize the app.
-- **`CTRL + Escape`**: Close the app.
 - **`CTRL + U`**: Undo the last note deletion.
 
 ### Why Choose Fortune's Folio?
