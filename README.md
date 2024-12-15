@@ -17,8 +17,7 @@
 ## Installation
 
 1. Click on the **Releases** tab on the right-hand side of this GitHub repository.
-2. Download the latest `.exe` file.
-3. Run the file directly—no installation needed!
+2. Follow installation steps for your OS
 
 ### Keyboard Shortcuts
 - **`CTRL + N`**: Create a new note.
