@@ -8,7 +8,7 @@
     <TitleBar />
 
     <!-- Main Content -->
-    <div class="mt-8 flex flex-grow flex-1 h-auto overflow-auto">
+    <div style="max-width: 100vw;" class="mt-8 flex flex-grow flex-1 h-auto overflow-auto">
         <slot />
     </div>
 </div>

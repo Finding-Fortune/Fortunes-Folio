@@ -462,6 +462,37 @@
             (!selectedNote?.tags || !selectedNote.tags.includes(tag))
         );
 
+    function calculateMaxWidth(): void {
+        console.log("ye")
+        const header = document.querySelector<HTMLElement>("div.big-parent-container");
+        if (!header) return; // Exit if the header is not found
+
+        // Get the total width of the header
+        const headerWidth = header.getBoundingClientRect().width;
+
+        // Calculate the combined width of all children except the 'main' element
+        let otherChildrenWidth = 0;
+
+        Array.from(header.children).forEach((child) => {
+            const element = child as HTMLElement; // Ensure type safety for child elements
+            if (!element.matches("main")) { // Skip the 'main' child
+                const childWidth = element.getBoundingClientRect().width;
+                otherChildrenWidth += childWidth;
+            }
+        });
+
+        // Calculate the available width for 'main'
+        const mainWidth = Math.max(0, headerWidth - otherChildrenWidth); // Ensure non-negative width
+
+        // Apply the calculated width to 'main'
+        const main = header.querySelector<HTMLElement>("main");
+        if (main) {
+            main.style.width = `${mainWidth}px`;
+        }
+    }
+
+    let containerElement: HTMLElement | null = null;
+
     let selectedNoteId: number | null = null;
     onMount(() => {
         // Check system preferences for dark mode
@@ -469,6 +500,16 @@
         fetchTags()
         // Adjust the textarea height on mount
         autoResizeTextarea(); 
+
+        // Observe resizing for responsive updates
+        const resizeObserver = new ResizeObserver(() => {
+            calculateMaxWidth();
+        });
+
+        if(containerElement) resizeObserver.observe(containerElement);
+
+        // Initial calculation
+        calculateMaxWidth();
 
         // Wrap the async logic in a self-invoking function
         (async () => {
@@ -486,15 +527,16 @@
         window.addEventListener("keydown", handleKeydown);
         return () => {
             window.removeEventListener("keydown", handleKeydown);
+            resizeObserver.disconnect(); // Clean up observer on component destroy
         };
     });
 
 </script>
 
-<div class="flex flex-grow bg-gray-100 dark:bg-gray-900">
+<div bind:this={containerElement} class="big-parent-container flex flex-grow bg-gray-100 dark:bg-gray-900 w-full">
     <!-- Sidebar -->
     <aside
-        class="w-1/4 bg-gray-800 text-white p-4 flex flex-col h-screen"
+        class="w-1/4 bg-gray-800 text-white p-4 flex-none flex flex-col h-screen"
         style="max-height: calc(100vh - 32px);"
     >
         <div class="flex items-center justify-between mb-6">
@@ -561,9 +603,10 @@
         <ul class="flex-1 overflow-y-auto max-h-full">
             {#if notes.length > 0}
                 {#each notes as note (note.id)}
-                    <li style="min-width: 100%; max-width: 500px;">
+                    <li class="mb-4" style="min-width: 100%; max-width: 500px; max-height: 100px;">
                         <button
-                            class="w-full text-left p-3 rounded-lg mb-2 cursor-pointer bg-gray-700 hover:bg-gray-600"
+                            style="max-height: 100px;"
+                            class="overflow-auto w-full text-left p-3 rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600"
                             on:click={() => selectNote(note)}
                         >
                             <h3 class="text-lg font-semibold">{note.title}</h3>
@@ -572,7 +615,7 @@
                     </li>
                 {/each}
             {:else}
-                <p class="text-gray-400">No notes found.</p>
+                <p class="text-gray-400 w-full text-center py-2 text-lg font-medium text-bold">No notes found.</p>
             {/if}
         </ul>
 
@@ -599,10 +642,10 @@
 
 
     <!-- Main Content -->
-  <main class="flex-1 flex flex-col relative">
+  <main style="max-width: 100%;" class="flex-1 flex flex-col relative whitespace-nowrap">
     <!-- Header -->
-    <header class="shadow-md p-4 flex items-center justify-between bg-white dark:bg-gray-800 dark:text-white">
-      <div class="flex-1">
+    <header style="max-width: 100%;" class="shadow-md w-full p-4 flex items-center justify-between bg-white dark:bg-gray-800 dark:text-white">
+      <div class="flex-1 overflow-auto whitespace-nowrap">
         {#if selectedNote}
           {#if selectedNote.markdown}
             <h1 class="text-xl font-bold truncate">{selectedNote.title}</h1>
@@ -617,7 +660,7 @@
         {/if}
       </div>
       {#if selectedNote}
-        <div class="flex space-x-4">
+        <div class="flex-none ml-4 flex space-x-4">
           <button
             class="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
             on:click={toggleMarkdown}
@@ -671,6 +714,7 @@
         {/if}
       {/if}
       <!-- Sticky Tags Section -->
+      {#if selectedNote}
     <div style="padding: 20px 0.5rem;" class={`h-auto bg-gray-100 border-t flex flex-col ${!selectedNote?.markdown ? 'h-28 sticky bottom-0' : 'h-16'} px-2 pt-2`}>
         <div class="flex items-center">
             <h2 class="text-lg font-bold pr-2">Tags</h2>
@@ -765,7 +809,7 @@
         </div>
         {/if}
     </div>
-    </div>
+    {/if}
   </main>  
 </div>
 
