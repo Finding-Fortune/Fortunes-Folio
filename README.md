@@ -12,6 +12,7 @@
 - **Keyboard Shortcuts:** Perform all operations quickly with intuitive keybinds.
 - **Portable and Lightweight:** A single `.exe` file (~6 MB), with no installation required.
 - **Undo Deletion:** Recover the last deleted note until the app is closed.
+- **Sidebar Resizing:** Drag the gray line on the Notes sidebar to resize to preference.
 
 ## Installation
 
