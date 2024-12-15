@@ -9,8 +9,5 @@ An app to take your notes, minimalistically, focused around the idea of "tagging
 
 ## Bugs To-Do
 - Bug where if you look up a tag on the notes page, it somehow splits the tag you searched for on 
-  the note into its component letters individually into separate tags. Just a visual bug
-- The sidebar adjustment javascript is broken
-- When typing a note when its not fullscreen, the textarea takes up a huge area offscreen 
-  before it goes to the next line. It needs to fit the viewport-width so I can actually see my 
-  entire note as I type
+  the note into its component letters individually into separate tags. Just a visual bug,
+  but it strangely only happens in release builds
