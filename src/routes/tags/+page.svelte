@@ -132,10 +132,10 @@
     <!-- Notes List -->
     {#if selectedTag}
         <div>
-            <h2 class="text-xl font-bold text-gray-700 mb-4">
-                Notes with tag: <span
+            <h2 class="flex space-around-2 text-xl font-bold text-gray-700 mb-4">
+                <span style="min-width: fit-content;">Notes with tag:</span> <span
                 style="display: inline-block; max-width: 100%; overflow: auto; white-space: nowrap;"
-                class="text-indigo-600 dark:text-indigo-300"
+                class="ml-2 text-indigo-600 dark:text-indigo-300"
                 title={selectedTag} 
               >
                 {selectedTag}
