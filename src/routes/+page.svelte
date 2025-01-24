@@ -319,41 +319,41 @@
     // Add the keybind listener
     export const maximizedWindow = writable(false);
     function handleKeydown(event: KeyboardEvent): void {
-        if (event.ctrlKey && event.key === "e") {
+        if ((event.ctrlKey || event.metaKey) && event.key === "e") {
             event.preventDefault();
             if (selectedNote) { 
                 toggleMarkdown();
             }
         }
-        if (event.ctrlKey && event.key === "s") {
+        if ((event.ctrlKey || event.metaKey) && event.key === "s") {
             event.preventDefault();
             saveChanges();
         }
-        if (event.ctrlKey && event.key === "d") {
+        if ((event.ctrlKey || event.metaKey) && event.key === "d") {
             event.preventDefault();
             deleteNote();
         }
-        if (event.ctrlKey && event.key === "n") {
+        if ((event.ctrlKey || event.metaKey) && event.key === "n") {
             event.preventDefault();
             addNewNote();
         }
-        if (event.ctrlKey && event.key === "f") {
+        if ((event.ctrlKey || event.metaKey) && event.key === "f") {
             event.preventDefault();
             appWindow.toggleMaximize();
         }
-        if(event.ctrlKey && event.key == "m") {
+        if((event.ctrlKey || event.metaKey) && event.key == "m") {
             event.preventDefault();
             appWindow.minimize();
         }
-        if(event.ctrlKey && event.key == "Escape") {
+        if((event.ctrlKey || event.metaKey) && event.key == "Escape") {
             event.preventDefault();
             appWindow.close()
         }
-        if(event.ctrlKey && event.key == "t") {
+        if((event.ctrlKey || event.metaKey) && event.key == "t") {
             event.preventDefault();
             goto('/tags');
         }
-        if(event.ctrlKey && event.key == "u") {
+        if((event.ctrlKey || event.metaKey) && event.key == "u") {
             event.preventDefault();
             undoDeleteNote();
         }
