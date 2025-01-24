@@ -661,13 +661,15 @@
       </div>
       {#if selectedNote}
         <div class="flex-none ml-4 flex space-x-4">
+            {#if selectedNote.markdown}
           <button
             class="font-semibold p-2 bg-green-600 text-white rounded-lg hover:bg-yellow-600"
             on:click={toggleMarkdown}
             on:click={autoResizeTextarea}
           >
-            {selectedNote.markdown ? "Edit" : "Preview"}
+          Edit
           </button>
+          {/if}
           {#if !selectedNote.markdown}
             <button
                 class="font-semibold p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
