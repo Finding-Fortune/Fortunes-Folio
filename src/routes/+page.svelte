@@ -692,6 +692,7 @@
               type="text"
               class="text-xl font-bold border-b-2 focus:outline-none focus:border-blue-500 p-1 w-full max-w-lg truncate"
               bind:value={selectedNote.title}
+              on:input={saveChangesInline}
               placeholder="Enter title here"
             />
           {/if}
