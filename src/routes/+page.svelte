@@ -200,6 +200,41 @@
         }
     }
 
+    // Saves changes without exiting the edit move
+    async function saveChangesInline() {
+        if (selectedNote) {
+            try {
+                // Save the selected note's ID
+                const currentNoteId = selectedNote.id;
+
+                const validTags = Array.isArray(selectedNote.tags)
+                    ? selectedNote.tags.filter((tag) => tag.trim() !== "") // Filter out empty tags
+                    : selectedNote.tags
+                    ? selectedNote.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag !== "")
+                    : [];
+
+                await invoke("update_note", {
+                    id: selectedNote.id,
+                    title: selectedNote.title,
+                    content: selectedNote.content,
+                    markdown: selectedNote.markdown,
+                    tags: validTags,
+                });
+
+                // selectedNote.markdown = true; // Switch to markdown mode after saving
+                await fetchNotes(false); // Refresh the notes list
+
+                // // Re-select the current note based on its ID
+                // const updatedNote = notes.find((note) => note.id === currentNoteId);
+                // if (updatedNote) {
+                //     selectNote(updatedNote);
+                // }
+            } catch (error) {
+                console.error("Failed to save changes:", error);
+            }
+        }
+    }
+
     let lastDeletedNote: Note | null = null;
     async function deleteNote() {
         if (!selectedNote) return;
@@ -256,6 +291,9 @@
     let textareaElement: HTMLTextAreaElement | null = null;
 
     function autoResizeTextarea() {
+        // Also automatically save the text area
+        saveChangesInline();
+        
         if (textareaElement) {
             // Save the current scroll position of the window
             const windowScrollY = window.scrollY;
@@ -378,7 +416,7 @@
     }
 
   // Fetch notes from the backend
-    async function fetchNotes() {
+    async function fetchNotes(selectFirst: boolean = true) {
         try {
             const rawNotes = (await invoke("get_notes")) as Note[];
             notes = rawNotes.map((note) => ({
@@ -388,7 +426,7 @@
                     : note.tags,
                 markdown: true, // Set markdown mode to true by default after saving
             }));
-            if (notes.length > 0) {
+            if (selectFirst && notes.length > 0) {
                 selectedNote = notes[0]; // Select the first note by default
             }
         } catch (error) {
@@ -675,7 +713,7 @@
                 class="font-semibold p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 on:click={saveChanges}
             >
-                Save
+                Preview
             </button>
           {/if}
           <button
@@ -776,7 +814,7 @@
                 />
                 <button
                     class="flex-shrink-0 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
-                    on:click={addTag}
+                    on:click={() => { addTag(); saveChangesInline(); }}
                 >
                     Add Tag
                 </button>
