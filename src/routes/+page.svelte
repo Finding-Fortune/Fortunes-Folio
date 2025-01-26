@@ -501,7 +501,6 @@
         );
 
     function calculateMaxWidth(): void {
-        console.log("ye")
         const header = document.querySelector<HTMLElement>("div.big-parent-container");
         if (!header) return; // Exit if the header is not found
 
