@@ -354,6 +354,146 @@
         }
     }
 
+    function getLineRange(textarea: HTMLTextAreaElement): [number, number] {
+        const text = textarea.value;
+        const pos = textarea.selectionStart;
+
+        // Find the start of the line
+        let lineStart = text.lastIndexOf('\n', pos - 1);
+        if (lineStart === -1) {
+            lineStart = 0;
+        } else {
+            lineStart += 1; // move from the newline char to the next character
+        }
+
+        // Find the end of the line
+        let lineEnd = text.indexOf('\n', pos);
+        if (lineEnd === -1) {
+            lineEnd = text.length;
+        }
+
+        return [lineStart, lineEnd];
+    }
+
+    function wrapSelection(symbolLeft: string, symbolRight: string = symbolLeft) {
+        if (!selectedNote || selectedNote.markdown || !textareaElement) return;
+
+        let start = textareaElement.selectionStart;
+        let end = textareaElement.selectionEnd;
+
+        // If no selection, select the entire line
+        if (start === end) {
+            const [lineStart, lineEnd] = getLineRange(textareaElement);
+            start = lineStart;
+            end = lineEnd;
+        }
+
+        const text = textareaElement.value;
+        const before = text.substring(0, start);
+        const selectedText = text.substring(start, end);
+        const after = text.substring(end);
+
+        const newText = before + symbolLeft + selectedText + symbolRight + after;
+
+        // Update <textarea>
+        textareaElement.value = newText;
+
+        // Place the cursor after the newly added symbols
+        const newCursor = end + symbolLeft.length + symbolRight.length;
+        textareaElement.setSelectionRange(newCursor, newCursor);
+
+        // Sync with your note
+        selectedNote.content = newText;
+        autoResizeTextarea();
+    }
+
+    function makeLink() {
+        if (!selectedNote || selectedNote.markdown || !textareaElement) return;
+
+        let start = textareaElement.selectionStart;
+        let end = textareaElement.selectionEnd;
+        const text = textareaElement.value;
+
+        // If no selection, select the entire line
+        if (start === end) {
+            const [lineStart, lineEnd] = getLineRange(textareaElement);
+            start = lineStart;
+            end = lineEnd;
+        }
+
+        // Now we have a start/end range (either user-selected or the entire line)
+        const before = text.substring(0, start);
+        let selectedText = text.substring(start, end).trim(); // e.g. "test"
+
+        // If there's literally nothing on that line, default to "title"
+        if (!selectedText) {
+            selectedText = "title";
+        }
+
+        const after = text.substring(end);
+
+        // Replace selection with [selectedText](http://)
+        const newText = before + `[${selectedText}](http://)` + after;
+        textareaElement.value = newText;
+
+        // Place the cursor inside the parentheses "()" so user can type the URL
+        const newCursorPos = before.length + selectedText.length + 3; // [ + selectedText + ]( 
+        textareaElement.setSelectionRange(newCursorPos, newCursorPos);
+
+        // Sync with your note and auto-resize
+        selectedNote.content = newText;
+        autoResizeTextarea();
+    }
+
+    function addHeaderLevel() {
+        if (!selectedNote || selectedNote.markdown || !textareaElement) return;
+
+        let start = textareaElement.selectionStart;
+        let end = textareaElement.selectionEnd;
+        const text = textareaElement.value;
+
+        // If no selection, select the entire line
+        if (start === end) {
+            const [lineStart, lineEnd] = getLineRange(textareaElement);
+            start = lineStart;
+            end = lineEnd;
+        }
+
+        const before = text.substring(0, start);
+        const selection = text.substring(start, end);
+        const after = text.substring(end);
+
+        // Convert selection into lines
+        const lines = selection.split("\n").map((line) => {
+            // Keep original leading spaces
+            const leadingSpaces = line.length - line.trimStart().length;
+            const leftIndent = line.slice(0, leadingSpaces);
+            const trimmed = line.trimStart();
+
+            // Count how many # are already at the start
+            const headingPrefixMatch = trimmed.match(/^#+/);
+            const existingCount = headingPrefixMatch ? headingPrefixMatch[0].length : 0;
+
+            // Increase heading level by 1
+            const newCount = existingCount + 1;
+
+            // Remove old #, then ensure a single space
+            const textAfterPrefix = trimmed.replace(/^#+/, "").trimStart();
+
+            return leftIndent + "#".repeat(newCount) + " " + textAfterPrefix;
+        });
+
+        const newSelection = lines.join("\n");
+        const newText = before + newSelection + after;
+
+        textareaElement.value = newText;
+        // Keep selection range around newly transformed lines
+        textareaElement.setSelectionRange(start, start + newSelection.length);
+
+        selectedNote.content = newText;
+        autoResizeTextarea();
+    }
+
     // Add the keybind listener
     export const maximizedWindow = writable(false);
     function handleKeydown(event: KeyboardEvent): void {
@@ -394,6 +534,30 @@
         if((event.ctrlKey || event.metaKey) && event.key == "u") {
             event.preventDefault();
             undoDeleteNote();
+        }
+        // Bold
+        if ((event.ctrlKey || event.metaKey) && event.key === "b") {
+            event.preventDefault();
+            wrapSelection("**");
+        }
+
+        // Italic
+        if ((event.ctrlKey || event.metaKey) && event.key === "i") {
+            event.preventDefault();
+            wrapSelection("*");
+        }
+
+        // Heading
+        // Each press adds another '#'
+        if ((event.ctrlKey || event.metaKey) && event.key === "h") {
+            event.preventDefault();
+            addHeaderLevel();
+        }
+
+        // Link => Ctrl+Shift+L
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "l") {
+            event.preventDefault();
+            makeLink();
         }
     }
 
@@ -941,9 +1105,12 @@
     background-color: #1f2937 !important; /* Equivalent to dark:bg-gray-800 */
     color: #f3f4f6 !important; /* Equivalent to dark:text-white */
 }
-:global(html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark ol, html.dark li, html.dark li::marker) {
+:global(html.dark a, html.dark textarea, html.dark input, html.dark .tag, html.dark ul, html.dark ol, html.dark li, html.dark li::marker, html.dark strong) {
     background-color: #2d3748 !important; /* Equivalent to dark:bg-gray-800 */
     color: #f3f4f6 !important; /* Equivalent to dark:text-white */
+}
+strong {
+    font-weight: 700;
 }
 
 :root {
