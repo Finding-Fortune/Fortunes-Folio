@@ -69,9 +69,6 @@ impl AppState {
     }
 }
 
-
-
-
 #[tauri::command]
 fn get_dark_mode(state: tauri::State<AppState>) -> Result<bool, String> {
     let conn = state.conn.lock().unwrap();
@@ -97,7 +94,6 @@ fn set_dark_mode(state: tauri::State<AppState>, enabled: bool) -> Result<(), Str
     .map_err(|e| format!("Failed to set dark mode: {}", e))?;
     Ok(())
 }
-
 
 #[tauri::command]
 fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
@@ -135,7 +131,6 @@ fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
     notes_iter.filter_map(|res| res.ok()).collect()
 }
 
-
 #[tauri::command]
 fn add_note(
     state: tauri::State<AppState>,
@@ -147,7 +142,10 @@ fn add_note(
     let conn = state.conn.lock().unwrap();
 
     // Filter out empty tags
-    let valid_tags: Vec<String> = tags.into_iter().filter(|tag| !tag.trim().is_empty()).collect();
+    let valid_tags: Vec<String> = tags
+        .into_iter()
+        .filter(|tag| !tag.trim().is_empty())
+        .collect();
 
     // Insert the new note
     conn.execute(
@@ -167,11 +165,9 @@ fn add_note(
             .map_err(|e| format!("Failed to insert tag: {}", e))?;
 
         let tag_id: i32 = conn
-            .query_row(
-                "SELECT id FROM tags WHERE name = ?",
-                [&tag],
-                |row| row.get(0),
-            )
+            .query_row("SELECT id FROM tags WHERE name = ?", [&tag], |row| {
+                row.get(0)
+            })
             .map_err(|e| format!("Failed to retrieve tag ID: {}", e))?;
 
         conn.execute(
@@ -183,7 +179,6 @@ fn add_note(
 
     Ok(())
 }
-
 
 #[tauri::command]
 fn update_note(
@@ -213,11 +208,9 @@ fn update_note(
             .map_err(|e| format!("Failed to insert tag: {}", e))?;
 
         let tag_id: i32 = conn
-            .query_row(
-                "SELECT id FROM tags WHERE name = ?",
-                [&tag],
-                |row| row.get(0),
-            )
+            .query_row("SELECT id FROM tags WHERE name = ?", [&tag], |row| {
+                row.get(0)
+            })
             .map_err(|e| format!("Failed to retrieve tag ID: {}", e))?;
 
         conn.execute(
@@ -229,7 +222,6 @@ fn update_note(
 
     Ok(())
 }
-
 
 #[tauri::command]
 fn delete_note(state: tauri::State<AppState>, id: i32) {
@@ -300,10 +292,10 @@ fn get_tags(state: tauri::State<AppState>) -> Result<Vec<String>, String> {
     Ok(tags)
 }
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .manage(AppState::new()) // Initialize AppState and create the table
         .invoke_handler(tauri::generate_handler![
             get_notes,

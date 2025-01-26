@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { marked } from 'marked';
+    import { marked, Renderer } from 'marked';
+    import { type Tokens } from 'marked';
     import { onMount, tick } from "svelte";
     import { invoke } from '@tauri-apps/api/core'
     import { writable, get } from 'svelte/store';
@@ -11,6 +12,21 @@
     marked.setOptions({
         breaks: true, // Enable line breaks
         gfm: true,    // Enable GitHub Flavored Markdown
+    });
+
+    marked.use({
+        renderer: {
+            link(this: Renderer, token: Tokens.Link) {
+                const { href, title, text } = token;
+
+                // If no href, default to '#'
+                const safeHref = href || '#';
+                // If there's a title, we include it. Otherwise, omit the attribute.
+                const safeTitle = title ? ` title="${title}"` : '';
+
+                return `<a href="${safeHref}"${safeTitle} target="_blank" rel="noopener noreferrer">${text}</a>`;
+            }
+        }
     });
 
     let isResizing = false;
@@ -432,8 +448,8 @@
 
         const after = text.substring(end);
 
-        // Replace selection with [selectedText](http://)
-        const newText = before + `[${selectedText}](http://)` + after;
+        // Replace selection with [selectedText](https://www.)
+        const newText = before + `[${selectedText}](https://www.)` + after;
         textareaElement.value = newText;
 
         // Place the cursor inside the parentheses "()" so user can type the URL
