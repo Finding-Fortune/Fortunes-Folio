@@ -3,9 +3,13 @@
     import { marked, Renderer } from 'marked';
     import { type Tokens } from 'marked';
     import { onMount, tick } from "svelte";
-    import { invoke } from '@tauri-apps/api/core'
+    import { invoke } from '@tauri-apps/api/core';
+    import { open } from '@tauri-apps/plugin-dialog';
     import { writable, get } from 'svelte/store';
     import { getCurrentWindow } from "@tauri-apps/api/window";
+    import type { Folder, Note, FolderNode } from '../lib/types';
+    import { buildFolderTree } from '../lib/buildFolderTree';
+    import TreeFolder from '../components/TreeFolder.svelte';
 
     const appWindow = getCurrentWindow();
 
@@ -89,15 +93,6 @@
         document.removeEventListener("mouseup", stopResizing);
     }
 
-
-    interface Note {
-        id: number;
-        title: string;
-        content: string;
-        markdown: boolean; // New flag to toggle between Markdown and plain text
-        tags: string | string[];
-    }
-
     let notes: Note[] = [];
     let selectedNote: Note | null = null;
     let tagSearch = "";
@@ -155,12 +150,13 @@
         };
     }
 
-    async function addNewNote() {
+    async function addNewNote(folderId: number | null = null) {
         const newNote = {
             title: `New Note ${notes.length + 1}`,
             content: "",
             markdown: false,
             tags: [],
+            folder_id: selectedFolderId // pass a folder or null
         };
 
         try {
@@ -181,6 +177,25 @@
         }
     }
 
+    async function addNewFolder() {
+  const name = prompt("Enter folder name:");
+  if (!name) return;
+
+  // If you want subfolders, pass the currently selected folder as `parent_id`.
+  // If you only want top-level, pass `null`.
+  let parentId = selectedFolderId;
+
+  // If you *never* want subfolders, always do `parentId = null`.
+
+  try {
+    await invoke("add_folder", { name, parentId });
+    await fetchFolders();
+    buildTree();
+  } catch (err) {
+    console.error("Failed to create folder:", err);
+  }
+}
+
 
     async function saveChanges() {
         if (selectedNote) {
@@ -200,6 +215,7 @@
                     content: selectedNote.content,
                     markdown: selectedNote.markdown,
                     tags: validTags,
+                    folder_id: selectedNote.folder_id ?? null,
                 });
 
                 selectedNote.markdown = true; // Switch to markdown mode after saving
@@ -235,6 +251,7 @@
                     content: selectedNote.content,
                     markdown: selectedNote.markdown,
                     tags: validTags,
+                    folder_id: selectedNote.folder_id ?? null
                 });
 
                 // selectedNote.markdown = true; // Switch to markdown mode after saving
@@ -577,6 +594,19 @@
         }
     }
 
+    // For when user clicks a folder in the tree
+    let selectedFolderId: number | null = null;
+  function handleSelectFolder(folderId: number) {
+    console.log("Selected folder ID: " + folderId);
+    selectedFolderId = folderId;
+    // you could show folder details or do nothing
+  }
+
+  // For when user clicks a note in the tree
+  function handleSelectNote(note: Note) {
+    selectNote(note);
+  }
+
     async function searchNotesByTag(): Promise<void> {
         if (!tagSearch.trim()) {
             // Fetch all notes if search input is empty
@@ -596,6 +626,16 @@
     }
 
   // Fetch notes from the backend
+  let folders: Folder[] = [];
+
+  async function fetchFolders() {
+        try {
+            folders = await invoke<Folder[]>('get_folders');
+        } catch (error) {
+            console.error('Failed to fetch folders:', error);
+        }
+  }
+
     async function fetchNotes(selectFirst: boolean = true) {
         try {
             const rawNotes = (await invoke("get_notes")) as Note[];
@@ -708,6 +748,13 @@
         }
     }
 
+    let folderTree: FolderNode[] = []; // Our final tree structure
+
+  // After we fetch `folders` and `notes`, build the tree:
+  function buildTree() {
+    folderTree = buildFolderTree(folders, notes, null);
+  }
+
     let containerElement: HTMLElement | null = null;
 
     let selectedNoteId: number | null = null;
@@ -731,6 +778,8 @@
         // Wrap the async logic in a self-invoking function
         (async () => {
             await fetchNotes(); // Ensure notes are fetched before proceeding
+            await fetchFolders();
+            buildTree();
 
             const params = new URLSearchParams(window.location.search);
             const noteIdParam = params.get('noteId');
@@ -817,28 +866,25 @@
         </div>
 
         <!-- Notes List -->
-        <ul class="flex-1 overflow-y-auto max-h-full">
-            {#if notes.length > 0}
-                {#each notes as note (note.id)}
-                    <li class="mb-4" style="min-width: 100%; max-width: 500px; max-height: 100px;">
-                        <button
-                            style="max-height: 100px;"
-                            class="overflow-auto w-full text-left p-3 rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600"
-                            on:click={() => selectNote(note)}
-                        >
-                            <h3 class="text-lg font-semibold">{note.title}</h3>
-                            <p class="text-sm text-gray-300 truncate">{note.content}</p>
-                        </button>
-                    </li>
-                {/each}
-            {:else}
-                <p class="text-gray-400 w-full text-center py-2 text-lg font-medium text-bold">No notes found.</p>
-            {/if}
-        </ul>
+        <!-- Folder Explorer -->
+         <div class="flex-1 overflow-y-auto max-h-full">
+        <TreeFolder
+            folderTree={folderTree}
+            onSelectFolder={handleSelectFolder}
+            onSelectNote={handleSelectNote}
+            selectedFolderId={selectedFolderId}
+        />
+         </div>
 
+         <button
+         class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
+         on:click={addNewFolder}
+       >
+         + New Folder
+       </button>
         <button
             class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
-            on:click={addNewNote}
+            on:click={() => addNewNote()}
         >
             + New Note
         </button>
