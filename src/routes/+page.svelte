@@ -16,10 +16,6 @@
 
     // Map of folderId => isExpanded boolean
     let folderExpansionMap = new Map<number, boolean>();
-    function handleExpandChanged(event: CustomEvent) {
-        const { folderId, isExpanded } = event.detail;
-        folderExpansionMap.set(folderId, isExpanded);
-    }
 
     marked.setOptions({
         breaks: true, // Enable line breaks
@@ -808,25 +804,27 @@
     deleteFolder(folderId);
   }
 
+  function handleToggleExpansion(folderId: number, isExpanded: boolean) {
+  folderExpansionMap.set(folderId, isExpanded);
+}
+
     let folderTree: FolderNode[] = []; // Our final tree structure
 
   // After we fetch `folders` and `notes`, build the tree:
   function buildTree() {
-    const newTree = buildFolderTree(folders, notes, null);
+        const newTree = buildFolderTree(folders, notes, null);
 
-  // Reapply expansions
-  function restoreExpansion(node: FolderNode) {
-        const stored = folderExpansionMap.get(node.folder.id);
-        if (stored !== undefined) {
-        node.isExpanded = stored;
+        function applyExpansion(node: FolderNode) {
+            const stored = folderExpansionMap.get(node.folder.id);
+            if (stored !== undefined) {
+            node.isExpanded = stored;
+            }
+            node.children.forEach(applyExpansion);
         }
-        node.children.forEach(restoreExpansion);
+        newTree.forEach(applyExpansion);
+
+        folderTree = newTree;
     }
-
-    newTree.forEach(restoreExpansion);
-
-    folderTree = newTree;
-  }
 
     let containerElement: HTMLElement | null = null;
 
@@ -955,6 +953,7 @@
                 onAddSubfolder={handleAddSubfolder}
                 onAddNote={handleAddNote}
                 onDeleteFolder={handleDeleteFolder}
+                onToggleExpansion={handleToggleExpansion}
             />
          </div>
 
