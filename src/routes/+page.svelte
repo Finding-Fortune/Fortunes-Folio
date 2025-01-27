@@ -14,6 +14,28 @@
 
     const appWindow = getCurrentWindow();
 
+    let contextMenu = {
+        open: false,
+        folderId: 0 as number,
+        x: 0,
+        y: 0,
+    };
+
+    function handleRightClick(folderId: number, x: number, y: number) {
+        // Close if currently open for some other folder
+        contextMenu.open = true;
+        contextMenu.folderId = folderId;
+        contextMenu.x = x;
+        contextMenu.y = y;
+    }
+
+    // Hide the context menu on any global click
+    function handleGlobalClick() {
+        if (contextMenu.open) {
+            contextMenu.open = false;
+        }
+    }
+
     // Map of folderId => isExpanded boolean
     let folderExpansionMap = new Map<number, boolean>();
 
@@ -159,9 +181,26 @@
         };
     }
 
+    async function renameFolder(folderId: number) {
+        const newName = prompt("Enter the new folder name:");
+        if (!newName || !folderId) return;
+
+        try {
+            await invoke("update_folder", { folderid: folderId, newName });
+            await fetchFolders();
+            buildTree();
+        } catch (err) {
+            console.error("Failed to rename folder:", err);
+        }
+    }
+
     async function addNewNote(folderId?: number) {
         // Fallback to selectedFolderId if none is passed
         const useFolderId = folderId ?? selectedFolderId;
+
+        if (useFolderId && useFolderId > 0) {
+            folderExpansionMap.set(useFolderId, true);
+        }
 
         try {
             await invoke("add_note", {
@@ -191,6 +230,10 @@
 
         const name = prompt("Enter folder name:");
         if (!name) return;
+
+        if (parentId && parentId > 0) {
+            folderExpansionMap.set(parentId, true);
+        }
 
         try {
             await invoke("add_folder", { name, parentId });
@@ -863,9 +906,11 @@
             }
         })();
 
+        window.addEventListener("click", handleGlobalClick);
         window.addEventListener("keydown", handleKeydown);
         return () => {
             window.removeEventListener("keydown", handleKeydown);
+            window.removeEventListener("click", handleGlobalClick);
             resizeObserver.disconnect(); // Clean up observer on component destroy
         };
     });
@@ -874,6 +919,19 @@
         selectedNoteId = selectedNote.id;
     }
 </script>
+
+{#if contextMenu.open}
+  <div
+    class="context-menu"
+    style="position:absolute; left:{contextMenu.x}px; top:{contextMenu.y}px;"
+    on:contextmenu|preventDefault
+  >
+    <button on:click={() => handleAddSubfolder(contextMenu.folderId)}>+ New Subfolder</button>
+    <button on:click={() => handleAddNote(contextMenu.folderId)}>+ New Note</button>
+    <button on:click={() => renameFolder(contextMenu.folderId)}>Rename Folder</button>
+    <button on:click={() => handleDeleteFolder(contextMenu.folderId)}>Delete Folder</button>
+  </div>
+{/if}
 
 <div bind:this={containerElement} class="big-parent-container flex flex-grow bg-gray-100 dark:bg-gray-900 w-full">
     <!-- Sidebar -->
@@ -950,6 +1008,7 @@
                 onSelectFolder={handleSelectFolder}
                 onSelectNote={handleSelectNote}
                 selectedFolderId={selectedFolderId}
+                onRightClick={handleRightClick}
                 onAddSubfolder={handleAddSubfolder}
                 onAddNote={handleAddNote}
                 onDeleteFolder={handleDeleteFolder}
@@ -1288,5 +1347,29 @@ ul.autocomplete li {
     font-size: 0.875rem; /* Adjust text size */
     line-height: 1.25rem; /* Adjust line height */
 }
+ /* Context Menu */
+ .context-menu {
+    position: absolute;
+    z-index: 9999;
+    background-color: #333; /* dark gray background */
+    color: white;
+    padding: 4px 8px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+  }
+  .context-menu button {
+    background: none;
+    color: white;
+    border: none;
+    text-align: left;
+    padding: 4px 8px;
+    width: 100%;
+    cursor: pointer;
+  }
+  .context-menu button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 </style>
 
