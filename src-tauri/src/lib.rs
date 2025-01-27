@@ -304,19 +304,45 @@ fn update_folder(
     Ok(())
 }
 
+fn delete_folder_recursive(conn: &Connection, folder_id: i32) -> rusqlite::Result<()> {
+    // 1) Find subfolders of this folder.
+    //    For each child folder, call this function recursively.
+    let mut stmt = conn.prepare("SELECT id FROM folders WHERE parent_id = ?1")?;
+    let child_folder_ids = stmt.query_map([folder_id], |row| row.get::<_, i32>(0))?;
+
+    for child_id_result in child_folder_ids {
+        let child_id = child_id_result?;
+        println!("Recursively deleting subfolder: {}", child_id);
+        delete_folder_recursive(conn, child_id)?;
+    }
+
+    // 2) Delete all notes in this folder.
+    println!("Deleting notes in folder: {}", folder_id);
+    conn.execute("DELETE FROM notes WHERE folderid = ?1", [folder_id])?;
+
+    // 3) Finally, delete this folder itself.
+    println!("Deleting folder: {}", folder_id);
+    conn.execute("DELETE FROM folders WHERE id = ?1", [folder_id])?;
+
+    Ok(())
+}
+
 #[tauri::command]
 fn delete_folder(
     state: tauri::State<AppState>,
     folderid: i32,
 ) -> Result<(), String> {
+    println!("WFWERW");
     let conn = state.conn.lock().unwrap();
 
-    // If you want to move orphans out first, do that here:
-    // e.g. set any notes in this folder to folderid = NULL or a “root” folder.
-    // conn.execute("UPDATE notes SET folderid = NULL WHERE folderid = ?", [folderid])?;
+    println!("Starting recursive delete for folder: {}", folderid);
 
-    conn.execute("DELETE FROM folders WHERE id = ?1", [folderid])
-        .map_err(|e| format!("Failed to delete folder: {}", e))?;
+    if let Err(e) = delete_folder_recursive(&conn, folderid) {
+        println!("Error while deleting folder {}: {}", folderid, e);
+        return Err(format!("Failed to delete folder: {}", e));
+    }
+
+    println!("Successfully deleted folder {} and all its contents", folderid);
     Ok(())
 }
 

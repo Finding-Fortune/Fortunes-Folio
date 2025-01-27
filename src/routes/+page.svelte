@@ -204,11 +204,11 @@
     async function deleteFolder(folderId: number) {
         if (!folderId) return;
 
-        const confirmDelete = confirm("Are you sure you want to delete this folder?");
-        if (!confirmDelete) return;
+        // const confirmDelete = confirm("Are you sure you want to delete this folder?");
+        // if (!confirmDelete) return;
 
         try {
-            await invoke("delete_folder", { folder_id: folderId });
+            await invoke("delete_folder", { folderid: folderId });
             await fetchFolders(); // Refresh folder data
             buildTree(); // Rebuild the tree structure
         } catch (err) {
