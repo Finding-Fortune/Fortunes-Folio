@@ -14,6 +14,13 @@
 
     const appWindow = getCurrentWindow();
 
+    // Map of folderId => isExpanded boolean
+    let folderExpansionMap = new Map<number, boolean>();
+    function handleExpandChanged(event: CustomEvent) {
+        const { folderId, isExpanded } = event.detail;
+        folderExpansionMap.set(folderId, isExpanded);
+    }
+
     marked.setOptions({
         breaks: true, // Enable line breaks
         gfm: true,    // Enable GitHub Flavored Markdown
@@ -141,6 +148,7 @@
                 } catch (error) {
                     console.error("Failed to update tags:", error);
                 }
+                buildTree(); 
             }
         }
     }
@@ -155,49 +163,38 @@
         };
     }
 
-    async function addNewNote() {
-        const newNote = {
-            folderid: Number(1), // pass a folder or null
-            title: `New Note ${notes.length + 1}`,
-            content: "",
-            markdown: false,
-        };
-
-        console.log(newNote)
-        console.log("selectedFolderId is", selectedFolderId);
+    async function addNewNote(folderId?: number) {
+        // Fallback to selectedFolderId if none is passed
+        const useFolderId = folderId ?? selectedFolderId;
 
         try {
-            // Add the new note to the backend
             await invoke("add_note", {
-                folderid: Number(selectedFolderId), // pass a folder or null
+                folderid: useFolderId ?? 0, // or null if you want top-level
                 title: `New Note ${notes.length + 1}`,
                 content: "",
                 markdown: false,
             });
 
-            // Fetch the updated notes list
             await fetchNotes();
+            buildTree();
 
-            // Identify the newly added note (assuming it's the last one added)
+            // Identify the newly added note (assuming it's the last one)
             selectedNote = {
                 ...notes[notes.length - 1],
                 markdown: false,
-                tags: [], // Ensure no empty tags are present
+                tags: []
             };
         } catch (error) {
             console.error("Failed to add note:", error);
         }
     }
 
-    async function addNewFolder() {
+    async function addNewFolder(folderId?: number) {
+        // If the caller provided a folderId, use it; otherwise fallback to selectedFolderId
+        const parentId = folderId ?? selectedFolderId;
+
         const name = prompt("Enter folder name:");
         if (!name) return;
-
-        // If you want subfolders, pass the currently selected folder as `parent_id`.
-        // If you only want top-level, pass `null`.
-        let parentId = selectedFolderId;
-
-        // If you *never* want subfolders, always do `parentId = null`.
 
         try {
             await invoke("add_folder", { name, parentId });
@@ -220,6 +217,22 @@
             buildTree(); // Rebuild the tree structure
         } catch (err) {
             console.error("Failed to delete folder:", err);
+        }
+    }
+
+    // We'll create an event listener to handle those custom events
+    function handleTreeEvent(event: CustomEvent) {
+        const { type } = event;
+        console.log("YE")
+        if (type === 'add-subfolder') {
+            const { parentId } = event.detail;
+            addNewFolder(parentId); // or your logic to add subfolder
+        } else if (type === 'add-note-in-folder') {
+            const { folderId } = event.detail;
+            addNewNote(folderId);
+        } else if (type === 'delete-folder') {
+            const { folderId } = event.detail;
+            deleteFolder(folderId);
         }
     }
 
@@ -247,6 +260,7 @@
 
                 selectedNote.markdown = true; // Switch to markdown mode after saving
                 await fetchNotes(); // Refresh the notes list
+                buildTree(); 
 
                 // Re-select the current note based on its ID
                 const updatedNote = notes.find((note) => note.id === currentNoteId);
@@ -283,6 +297,7 @@
 
                 // selectedNote.markdown = true; // Switch to markdown mode after saving
                 await fetchNotes(false); // Refresh the notes list
+                buildTree(); 
 
                 // // Re-select the current note based on its ID
                 // const updatedNote = notes.find((note) => note.id === currentNoteId);
@@ -316,6 +331,7 @@
                 // Select another note (e.g., the first one)
                 selectedNote = notes[0];
             }
+            buildTree(); 
         } catch (error) {
             console.error("Failed to delete note:", error);
         }
@@ -343,6 +359,7 @@
 
             // Clear the deleted note reference after restoration
             lastDeletedNote = null;
+            buildTree(); 
         } catch (error) {
             console.error("Failed to undo delete note:", error);
         }
@@ -776,11 +793,39 @@
         }
     }
 
+    // When user chooses “Add Subfolder” from context menu
+  function handleAddSubfolder(folderId: number) {
+    addNewFolder(folderId);
+  }
+
+  // When user chooses “Add Note” from context menu
+  function handleAddNote(folderId: number) {
+    addNewNote(folderId);
+  }
+
+  // When user chooses “Delete Folder” from context menu
+  function handleDeleteFolder(folderId: number) {
+    deleteFolder(folderId);
+  }
+
     let folderTree: FolderNode[] = []; // Our final tree structure
 
   // After we fetch `folders` and `notes`, build the tree:
   function buildTree() {
-    folderTree = buildFolderTree(folders, notes, null);
+    const newTree = buildFolderTree(folders, notes, null);
+
+  // Reapply expansions
+  function restoreExpansion(node: FolderNode) {
+        const stored = folderExpansionMap.get(node.folder.id);
+        if (stored !== undefined) {
+        node.isExpanded = stored;
+        }
+        node.children.forEach(restoreExpansion);
+    }
+
+    newTree.forEach(restoreExpansion);
+
+    folderTree = newTree;
   }
 
     let containerElement: HTMLElement | null = null;
@@ -826,12 +871,9 @@
             resizeObserver.disconnect(); // Clean up observer on component destroy
         };
     });
-    $: console.log(selectedNoteId)
-    $: if(selectedNote) {
-        selectedNoteId = selectedNote.id;
-    }
     $: if(selectedNote) {
         selectedNoteID.set(selectedNote.id);
+        selectedNoteId = selectedNote.id;
     }
 </script>
 
@@ -903,18 +945,22 @@
 
         <!-- Notes List -->
         <!-- Folder Explorer -->
-         <div class="flex-1 overflow-y-auto max-h-full">
-        <TreeFolder
-            folderTree={folderTree}
-            onSelectFolder={handleSelectFolder}
-            onSelectNote={handleSelectNote}
-            selectedFolderId={selectedFolderId}
-        />
+         <div class="flex-1 overflow-y-auto max-h-full"
+         >
+            <TreeFolder
+                folderTree={folderTree}
+                onSelectFolder={handleSelectFolder}
+                onSelectNote={handleSelectNote}
+                selectedFolderId={selectedFolderId}
+                onAddSubfolder={handleAddSubfolder}
+                onAddNote={handleAddNote}
+                onDeleteFolder={handleDeleteFolder}
+            />
          </div>
 
-         <button
+       <button
          class="mt-4 p-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
-         on:click={addNewFolder}
+         on:click={() => addNewFolder()}
        >
          + New Folder
        </button>
