@@ -10,6 +10,7 @@
     import type { Folder, Note, FolderNode } from '../lib/types';
     import { buildFolderTree } from '../lib/buildFolderTree';
     import TreeFolder from '../components/TreeFolder.svelte';
+    import { selectedNoteID } from '../stores';
 
     const appWindow = getCurrentWindow();
 
@@ -93,6 +94,10 @@
         document.removeEventListener("mouseup", stopResizing);
     }
 
+    let tags: string[] = []; // List of all existing tags
+    let filteredTags  = []; // Filtered tags for autocomplete
+    let isInputFocused: boolean = false; // Track input focus state
+
     let notes: Note[] = [];
     let selectedNote: Note | null = null;
     let tagSearch = "";
@@ -150,18 +155,25 @@
         };
     }
 
-    async function addNewNote(folderId: number | null = null) {
+    async function addNewNote() {
         const newNote = {
+            folderid: Number(1), // pass a folder or null
             title: `New Note ${notes.length + 1}`,
             content: "",
             markdown: false,
-            tags: [],
-            folder_id: selectedFolderId // pass a folder or null
         };
+
+        console.log(newNote)
+        console.log("selectedFolderId is", selectedFolderId);
 
         try {
             // Add the new note to the backend
-            await invoke("add_note", newNote);
+            await invoke("add_note", {
+                folderid: Number(selectedFolderId), // pass a folder or null
+                title: `New Note ${notes.length + 1}`,
+                content: "",
+                markdown: false,
+            });
 
             // Fetch the updated notes list
             await fetchNotes();
@@ -178,23 +190,38 @@
     }
 
     async function addNewFolder() {
-  const name = prompt("Enter folder name:");
-  if (!name) return;
+        const name = prompt("Enter folder name:");
+        if (!name) return;
 
-  // If you want subfolders, pass the currently selected folder as `parent_id`.
-  // If you only want top-level, pass `null`.
-  let parentId = selectedFolderId;
+        // If you want subfolders, pass the currently selected folder as `parent_id`.
+        // If you only want top-level, pass `null`.
+        let parentId = selectedFolderId;
 
-  // If you *never* want subfolders, always do `parentId = null`.
+        // If you *never* want subfolders, always do `parentId = null`.
 
-  try {
-    await invoke("add_folder", { name, parentId });
-    await fetchFolders();
-    buildTree();
-  } catch (err) {
-    console.error("Failed to create folder:", err);
-  }
-}
+        try {
+            await invoke("add_folder", { name, parentId });
+            await fetchFolders();
+            buildTree();
+        } catch (err) {
+            console.error("Failed to create folder:", err);
+        }
+    }
+
+    async function deleteFolder(folderId: number) {
+        if (!folderId) return;
+
+        const confirmDelete = confirm("Are you sure you want to delete this folder?");
+        if (!confirmDelete) return;
+
+        try {
+            await invoke("delete_folder", { folder_id: folderId });
+            await fetchFolders(); // Refresh folder data
+            buildTree(); // Rebuild the tree structure
+        } catch (err) {
+            console.error("Failed to delete folder:", err);
+        }
+    }
 
 
     async function saveChanges() {
@@ -215,7 +242,7 @@
                     content: selectedNote.content,
                     markdown: selectedNote.markdown,
                     tags: validTags,
-                    folder_id: selectedNote.folder_id ?? null,
+                    folderid: selectedNote.folderid ?? null,
                 });
 
                 selectedNote.markdown = true; // Switch to markdown mode after saving
@@ -251,7 +278,7 @@
                     content: selectedNote.content,
                     markdown: selectedNote.markdown,
                     tags: validTags,
-                    folder_id: selectedNote.folder_id ?? null
+                    folderid: selectedNote.folderid ?? null
                 });
 
                 // selectedNote.markdown = true; // Switch to markdown mode after saving
@@ -597,14 +624,17 @@
     // For when user clicks a folder in the tree
     let selectedFolderId: number | null = null;
   function handleSelectFolder(folderId: number) {
-    console.log("Selected folder ID: " + folderId);
-    selectedFolderId = folderId;
+    if(selectedFolderId == folderId) {
+        selectedFolderId = null;
+    }
+    else selectedFolderId = folderId;
     // you could show folder details or do nothing
   }
 
   // For when user clicks a note in the tree
   function handleSelectNote(note: Note) {
     selectNote(note);
+    selectedNoteId = note.id;
   }
 
     async function searchNotesByTag(): Promise<void> {
@@ -645,9 +675,11 @@
                     ? note.tags.split(",").map((tag) => tag.trim()) // Convert tags from string to array
                     : note.tags,
                 markdown: true, // Set markdown mode to true by default after saving
+                folderid: note.folderid,
             }));
             if (selectFirst && notes.length > 0) {
                 selectedNote = notes[0]; // Select the first note by default
+                selectedNoteId = selectedNote.id;
             }
         } catch (error) {
             console.error("Failed to fetch notes:", error);
@@ -698,10 +730,6 @@
         }
     }
 
-
-    let tags: string[] = []; // List of all existing tags
-    let filteredTags  = []; // Filtered tags for autocomplete
-    let isInputFocused: boolean = false; // Track input focus state
 
     // Fetch all tags from the backend
     const fetchTags = async () => {
@@ -777,9 +805,11 @@
 
         // Wrap the async logic in a self-invoking function
         (async () => {
-            await fetchNotes(); // Ensure notes are fetched before proceeding
-            await fetchFolders();
-            buildTree();
+            // await fetchNotes(); // Ensure notes are fetched before proceeding
+            // await fetchFolders();
+            await Promise.all([fetchFolders(), fetchNotes()]).then(() => {
+                buildTree(); 
+            });
 
             const params = new URLSearchParams(window.location.search);
             const noteIdParam = params.get('noteId');
@@ -796,7 +826,13 @@
             resizeObserver.disconnect(); // Clean up observer on component destroy
         };
     });
-
+    $: console.log(selectedNoteId)
+    $: if(selectedNote) {
+        selectedNoteId = selectedNote.id;
+    }
+    $: if(selectedNote) {
+        selectedNoteID.set(selectedNote.id);
+    }
 </script>
 
 <div bind:this={containerElement} class="big-parent-container flex flex-grow bg-gray-100 dark:bg-gray-900 w-full">

@@ -12,7 +12,7 @@ struct Note {
     content: String,
     markdown: bool,
     tags: String, // Tags stored as a comma-separated string
-    folder_id: Option<i32>,
+    folderid: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,7 +50,7 @@ impl AppState {
                 content TEXT NOT NULL,
                 markdown BOOLEAN NOT NULL,
                 tags TEXT,
-                folder_id INTEGER REFERENCES folders(id) DEFAULT NULL
+                folderid INTEGER REFERENCES folders(id) DEFAULT NULL
             )",
             [],
         )
@@ -130,7 +130,7 @@ fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
             n.content,
             n.markdown,
             GROUP_CONCAT(t.name, ',') AS tags,
-            n.folder_id
+            n.folderid
          FROM notes n
          LEFT JOIN note_tags nt ON n.id = nt.note_id
          LEFT JOIN tags t      ON nt.tag_id = t.id
@@ -152,7 +152,7 @@ fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
                     .map(|s| s.trim().to_string())
                     .collect::<Vec<_>>()
                     .join(","), // keep as comma-separated for the frontend
-                folder_id: row.get::<_, Option<i32>>(5)?,
+                folderid: row.get::<_, Option<i32>>(5)?,
             })
         })
         .expect("Failed to map query results");
@@ -163,18 +163,17 @@ fn get_notes(state: tauri::State<AppState>) -> Vec<Note> {
 #[tauri::command]
 fn add_note(
     state: tauri::State<AppState>,
+    folderid: i32,
     title: String,
     content: String,
     markdown: bool,
-    tags: Vec<String>,
-    folder_id: Option<i32>, // new
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
 
     conn.execute(
-        "INSERT INTO notes (title, content, markdown, folder_id)
+        "INSERT INTO notes (title, content, markdown, folderid)
          VALUES (?1, ?2, ?3, ?4)",
-        params![title, content, markdown, folder_id],
+        params![title, content, markdown, folderid],
     ).map_err(|e| format!("Failed to insert note: {}", e))?;
 
     // Then handle tags as before...
@@ -190,16 +189,16 @@ fn update_note(
     content: String,
     markdown: bool,
     tags: Vec<String>,
-    folder_id: Option<i32>, // new
+    folderid: Option<i32>, // new
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
 
     // update the note itself
     conn.execute(
         "UPDATE notes
-         SET title = ?1, content = ?2, markdown = ?3, folder_id = ?4
+         SET title = ?1, content = ?2, markdown = ?3, folderid = ?4
          WHERE id = ?5",
-        params![title, content, markdown, folder_id, id],
+        params![title, content, markdown, folderid, id],
     ).map_err(|e| format!("Failed to update note: {}", e))?;
 
     // Then handle clearing/adding tag associations
@@ -250,7 +249,7 @@ fn search_notes_by_tag(state: tauri::State<AppState>, tag: String) -> Vec<Note> 
                     .map(|s| s.trim().to_string())
                     .collect::<Vec<String>>()
                     .join(", "), // Convert back to comma-separated string
-                folder_id: row.get(5)?,
+                folderid: row.get(5)?,
             })
         })
         .expect("Failed to execute query");
@@ -294,13 +293,13 @@ fn add_folder(
 #[tauri::command]
 fn update_folder(
     state: tauri::State<AppState>,
-    folder_id: i32,
+    folderid: i32,
     new_name: String,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     conn.execute(
         "UPDATE folders SET name = ?1 WHERE id = ?2",
-        params![new_name, folder_id],
+        params![new_name, folderid],
     ).map_err(|e| format!("Failed to update folder: {}", e))?;
     Ok(())
 }
@@ -308,15 +307,15 @@ fn update_folder(
 #[tauri::command]
 fn delete_folder(
     state: tauri::State<AppState>,
-    folder_id: i32,
+    folderid: i32,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
 
     // If you want to move orphans out first, do that here:
-    // e.g. set any notes in this folder to folder_id = NULL or a “root” folder.
-    // conn.execute("UPDATE notes SET folder_id = NULL WHERE folder_id = ?", [folder_id])?;
+    // e.g. set any notes in this folder to folderid = NULL or a “root” folder.
+    // conn.execute("UPDATE notes SET folderid = NULL WHERE folderid = ?", [folderid])?;
 
-    conn.execute("DELETE FROM folders WHERE id = ?1", [folder_id])
+    conn.execute("DELETE FROM folders WHERE id = ?1", [folderid])
         .map_err(|e| format!("Failed to delete folder: {}", e))?;
     Ok(())
 }
